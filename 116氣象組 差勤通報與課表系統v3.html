@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>116氣象組 差勤通報與雙向同步課表系統</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gh: {
+                            bg: '#0d1117',
+                            card: '#161b22',
+                            border: '#30363d',
+                            header: '#161b22',
+                            text: '#c9d1d9',
+                            muted: '#8b949e',
+                            accent: '#238636',
+                            accentHover: '#2ea043',
+                            blue: '#58a6ff',
+                            purple: '#bc8cff',
+                            gold: '#d29922',
+                            red: '#f85149'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'SF Pro Text', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PapaParse CSV Parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0d1117; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(48, 54, 61, 0.8);
+        }
+        .tab-btn.active {
+            border-bottom: 2px solid #58a6ff;
+            color: #58a6ff;
+            background-color: rgba(88, 166, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-gh-bg text-gh-text min-h-screen flex flex-col font-sans selection:bg-gh-blue selection:text-white">
+
+    <!-- 頂部導覽列 -->
+    <header class="sticky top-0 z-40 bg-gh-header/90 backdrop-blur-md border-b border-gh-border px-4 py-3 shadow-md">
+        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gh-blue/10 border border-gh-blue/30 rounded-xl text-gh-blue">
+                    <i class="fa-solid fa-cloud-sun-rain text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
+                        116氣象組 差勤通報與課表系統
+                        <span id="data-status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 flex items-center gap-1 font-normal">
+                            <i class="fa-solid fa-spinner animate-spin text-[10px]"></i> 載入中...
+                        </span>
+                    </h1>
+                    <p class="text-xs text-gh-muted">資料庫：<span class="font-mono text-gh-blue">差勤回報紀錄 (固定維持預估後 5 天)</span></p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="refreshAllData()" title="重新同步資料" class="p-2 text-gh-muted hover:text-white bg-gh-border/40 hover:bg-gh-border rounded-lg border border-gh-border transition flex items-center gap-1 text-xs">
+                    <i class="fa-solid fa-rotate text-xs" id="refresh-icon"></i>
+                    <span class="hidden sm:inline">重新同步</span>
+                </button>
+                <button onclick="switchTab('tab-settings')" class="p-2 text-gh-muted hover:text-white bg-gh-border/40 hover:bg-gh-border rounded-lg border border-gh-border transition flex items-center gap-1 text-xs">
+                    <i class="fa-solid fa-gear text-xs"></i>
+                    <span class="hidden sm:inline">設定</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 分頁選單 -->
+    <nav class="bg-gh-card border-b border-gh-border px-4 sticky top-[61px] z-30 shadow-sm">
+        <div class="max-w-4xl mx-auto flex space-x-1 overflow-x-auto no-scrollbar">
+            <button onclick="switchTab('tab-daily-report')" id="btn-tab-daily-report" class="tab-btn active px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
+                <i class="fa-solid fa-bullhorn text-gh-blue"></i> 當日通報
+            </button>
+            <button onclick="switchTab('tab-full-report')" id="btn-tab-full-report" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
+                <i class="fa-solid fa-pen-to-square text-gh-purple"></i> 預估 5 天編輯
+            </button>
+            <button onclick="switchTab('tab-daily-schedule')" id="btn-tab-daily-schedule" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
+                <i class="fa-solid fa-calendar-day text-gh-gold"></i> 當日課表
+            </button>
+            <button onclick="switchTab('tab-weekly-schedule')" id="btn-tab-weekly-schedule" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
+                <i class="fa-solid fa-table text-gh-accent"></i> 週課表總覽
+            </button>
+            <button onclick="switchTab('tab-settings')" id="btn-tab-settings" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
+                <i class="fa-solid fa-sliders text-gray-400"></i> 設定
+            </button>
+        </div>
+    </nav>
+
+    <!-- 主要內容區 -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
+
+        <!-- TAB 1: 當日通報 -->
+        <section id="tab-daily-report" class="tab-content space-y-4">
+            <div class="sticky top-[106px] z-20 glass-panel p-4 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg border border-gh-border/80">
+                <div class="flex items-center gap-3">
+                    <span id="current-date-badge" class="px-3 py-1 bg-gh-blue/10 border border-gh-blue/30 rounded-lg text-gh-blue font-semibold text-sm"></span>
+                    <div class="flex bg-gh-bg border border-gh-border rounded-lg p-1">
+                        <button onclick="setReportDay('today')" id="btn-day-today" class="px-3 py-1 text-xs rounded-md font-medium transition bg-gh-blue text-white shadow">今日</button>
+                        <button onclick="setReportDay('tomorrow')" id="btn-day-tomorrow" class="px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition">明日</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-gh-bg px-3 py-1.5 rounded-lg border border-gh-border">
+                    <span class="text-xs font-semibold text-gh-text flex items-center gap-1.5">
+                        <i class="fa-solid fa-person-walking-luggage text-gh-purple"></i> 外散假切換:
+                    </span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="leave-toggle" class="sr-only peer" onchange="toggleLeaveOption(this.checked)" checked>
+                        <div class="w-9 h-5 bg-gh-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gh-purple"></div>
+                    </label>
+                    <span id="leave-status-text" class="text-xs font-mono text-gh-purple font-bold">開啟 (含外散)</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="copyFullDayReport()" class="px-4 py-2 bg-gh-accent hover:bg-gh-accentHover text-white rounded-lg font-medium text-sm transition flex items-center gap-2 shadow">
+                        <i class="fa-solid fa-copy"></i> 複製當日通報
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col space-y-3" id="daily-report-cards-container"></div>
+        </section>
+
+        <!-- TAB 2: 預估 5 天編輯 -->
+        <section id="tab-full-report" class="tab-content hidden space-y-4">
+            <div class="sticky top-[106px] z-20 space-y-3 bg-gh-bg/95 backdrop-blur-md pt-2 pb-3 border-b border-gh-border/60">
+                <div class="glass-panel p-4 rounded-xl flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-base font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-calendar-days text-gh-purple"></i> 預估未來 5 個工作天編輯區
+                        </h2>
+                        <p class="text-xs text-gh-muted">系統已根據各星期的預設範本自動生成。修改後點擊儲存，將寫入『差勤回報紀錄』。</p>
+                    </div>
+                    <button onclick="saveCurrentDateToGAS()" id="save-gas-btn" class="px-4 py-2 bg-gh-purple hover:bg-purple-600 text-white rounded-lg font-medium text-sm transition flex items-center gap-2 shadow">
+                        <i class="fa-solid fa-floppy-disk"></i> 儲存此日變更
+                    </button>
+                </div>
+
+                <!-- 未來 5 個工作天標籤頁 -->
+                <div id="edit-day-buttons-container" class="flex space-x-2 overflow-x-auto pb-1 no-scrollbar"></div>
+            </div>
+
+            <div id="edit-day-panels" class="flex flex-col space-y-3 pt-2"></div>
+        </section>
+
+        <!-- TAB 3: 當日課表 -->
+        <section id="tab-daily-schedule" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-4 rounded-xl flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fa-solid fa-book-open text-gh-gold text-xl"></i>
+                    <h2 class="text-base font-bold text-white">當日課程安排</h2>
+                </div>
+                <div class="flex bg-gh-bg border border-gh-border rounded-lg p-1">
+                    <button onclick="setScheduleDay('today')" id="btn-sched-today" class="px-3 py-1 text-xs rounded-md font-medium transition bg-gh-gold text-black font-semibold">今日</button>
+                    <button onclick="setScheduleDay('tomorrow')" id="btn-sched-tomorrow" class="px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition">明日</button>
+                </div>
+            </div>
+
+            <div id="daily-schedule-timeline" class="flex flex-col space-y-3"></div>
+        </section>
+
+        <!-- TAB 4: 週課表總覽 -->
+        <section id="tab-weekly-schedule" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-4 rounded-xl flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-table-cells text-gh-accent"></i> 116 氣象組 完整週課表矩陣
+                    </h2>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-xl overflow-hidden border border-gh-border">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[650px]">
+                        <thead>
+                            <tr class="bg-gh-header text-xs text-gh-muted border-b border-gh-border">
+                                <th class="p-3 w-24 text-center border-r border-gh-border">節次 / 時間</th>
+                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期一</th>
+                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期二</th>
+                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期三</th>
+                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期四</th>
+                                <th class="p-3 text-center w-1/5">星期五</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weekly-timetable-body" class="divide-y divide-gh-border text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: 設定 -->
+        <section id="tab-settings" class="tab-content hidden space-y-4">
+            <div class="glass-panel p-6 rounded-xl space-y-4">
+                <div class="flex items-center gap-3 border-b border-gh-border pb-3">
+                    <i class="fa-solid fa-cloud-arrow-up text-gh-blue text-xl"></i>
+                    <div>
+                        <h2 class="text-base font-bold text-white">Google Apps Script (GAS) 雙向同步設定</h2>
+                        <p class="text-xs text-gh-muted">請填寫部署後的 Web App 網址以維護『差勤回報紀錄』。</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-semibold text-gh-text">GAS Web App 網址 (URL):</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="flex-1 bg-gh-bg border border-gh-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gh-blue">
+                        <button onclick="saveGASUrl()" class="px-4 py-2 bg-gh-blue hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition">
+                            儲存 URL
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        const SPREADSHEET_ID = '1JnYPSeE5pd2IkBCcQJjc5WjKrkBiBG69gUW73RJJopg';
+
+        let appData = { reports: [], schedule: [] };
+        let selectedReportDay = 'today'; 
+        let selectedScheduleDay = 'today';
+        let future5WorkDays = [];
+        let selectedWorkDayIdx = 0;
+        let hasLeaveOption = true;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedGasUrl = localStorage.getItem('gas_web_app_url');
+            if (savedGasUrl) document.getElementById('gas-url-input').value = savedGasUrl;
+            updateDateBadge();
+            generate5WorkDays();
+            refreshAllData();
+        });
+
+        function formatDateKey(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // 計算包含今天在內的未來 5 個工作天
+        function generate5WorkDays() {
+            future5WorkDays = [];
+            const weekLabels = ["日", "一", "二", "三", "四", "五", "六"];
+            let curr = new Date();
+
+            while (future5WorkDays.length < 5) {
+                const dayOfWeek = curr.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                    future5WorkDays.push({
+                        dateKey: formatDateKey(curr),
+                        dateObj: new Date(curr),
+                        month: curr.getMonth() + 1,
+                        date: curr.getDate(),
+                        dayOfWeek: dayOfWeek,
+                        dayLabel: weekLabels[dayOfWeek]
+                    });
+                }
+                curr.setDate(curr.getDate() + 1);
+            }
+            renderEditDayButtons();
+        }
+
+        // 核心：從「差勤回報紀錄」第一列 (Header) 找尋目標日期對應的 Column Index
+        function getColumnIndexByDateKey(targetDateKey) {
+            if (!appData.reports || appData.reports.length === 0) return -1;
+            const headers = appData.reports[0];
+            
+            for (let i = 1; i < headers.length; i++) {
+                let headerStr = String(headers[i]).trim();
+                if (headerStr.startsWith(targetDateKey)) return i;
+            }
+            return -1;
+        }
+
+        function renderEditDayButtons() {
+            const container = document.getElementById('edit-day-buttons-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            future5WorkDays.forEach((item, index) => {
+                const btn = document.createElement('button');
+                btn.onclick = () => switchEditWorkDay(index);
+                btn.id = `edit-workday-btn-${index}`;
+                btn.className = (index === selectedWorkDayIdx)
+                    ? "px-4 py-2 text-sm rounded-lg border border-gh-purple bg-gh-purple/10 font-bold text-gh-purple transition shadow whitespace-nowrap flex items-center gap-1.5"
+                    : "px-4 py-2 text-sm rounded-lg border border-gh-border bg-gh-bg font-medium text-gh-muted hover:text-white transition whitespace-nowrap flex items-center gap-1.5";
+                
+                btn.innerHTML = `${item.month}/${item.date} (${item.dayLabel})`;
+                container.appendChild(btn);
+            });
+        }
+
+        function switchEditWorkDay(idx) {
+            selectedWorkDayIdx = idx;
+            renderEditDayButtons();
+            renderFullReportEditor();
+        }
+
+        async function refreshAllData() {
+            const statusBadge = document.getElementById('data-status-badge');
+            const refreshIcon = document.getElementById('refresh-icon');
+            statusBadge.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-[10px]"></i> 自動同步 5 天...`;
+            refreshIcon.classList.add('animate-spin');
+
+            const gasUrl = localStorage.getItem('gas_web_app_url');
+            if (gasUrl) {
+                try {
+                    const response = await fetch(gasUrl);
+                    if (response.ok) {
+                        const json = await response.json();
+                        if (json.reports && json.schedule) {
+                            appData.reports = json.reports;
+                            appData.schedule = json.schedule;
+                            updateBadgeStatus('gas');
+                            renderAllViews();
+                            refreshIcon.classList.remove('animate-spin');
+                            return;
+                        }
+                    }
+                } catch (e) { console.warn("GAS 讀取失敗，自動嘗試 CSV 模式", e); }
+            }
+
+            try {
+                const reportCsvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('差勤回報紀錄')}`;
+                const scheduleCsvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('課表')}`;
+                const [repRes, schedRes] = await Promise.all([fetch(reportCsvUrl).then(r => r.text()), fetch(scheduleCsvUrl).then(r => r.text())]);
+
+                appData.reports = Papa.parse(repRes, { skipEmptyLines: true }).data;
+                appData.schedule = Papa.parse(schedRes, { skipEmptyLines: true }).data;
+                updateBadgeStatus('csv');
+                renderAllViews();
+                refreshIcon.classList.remove('animate-spin');
+            } catch (e) { console.warn("CSV 讀取失敗", e); }
+        }
+
+        function updateBadgeStatus(type) {
+            const badge = document.getElementById('data-status-badge');
+            if (type === 'gas') {
+                badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-normal";
+                badge.innerHTML = `<i class="fa-solid fa-cloud"></i> 差勤回報紀錄 (已同步 5 天)`;
+            } else {
+                badge.className = "text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center gap-1 font-normal";
+                badge.innerHTML = `<i class="fa-solid fa-table"></i> Google 試算表 (唯讀)`;
+            }
+        }
+
+        function renderAllViews() {
+            renderDailyReportView();
+            renderDailyScheduleView();
+            renderWeeklyTimetable();
+            renderEditDayButtons();
+        }
+
+        function renderDailyReportView() {
+            const targetDate = new Date();
+            if (selectedReportDay === 'tomorrow') targetDate.setDate(targetDate.getDate() + 1);
+            
+            const targetDateKey = formatDateKey(targetDate);
+            const colIndex = getColumnIndexByDateKey(targetDateKey);
+            const container = document.getElementById('daily-report-cards-container');
+            container.innerHTML = '';
+
+            if (!appData.reports || appData.reports.length < 2 || colIndex === -1) {
+                container.innerHTML = `<div class="p-6 text-center text-gh-muted glass-panel rounded-xl">尚未找到 ${targetDateKey} 之『差勤回報紀錄』資料。</div>`;
+                return;
+            }
+
+            for (let r = 1; r < appData.reports.length; r++) {
+                const row = appData.reports[r];
+                const rawSlotName = row[0] || '';
+                const content = row[colIndex] || '無特別紀錄';
+
+                if (rawSlotName.includes('1850')) {
+                    if (hasLeaveOption && rawSlotName.includes('無外散假')) continue;
+                    if (!hasLeaveOption && rawSlotName.includes('有外散假')) continue;
+                }
+
+                let displayTitle = rawSlotName;
+                let badgeHtml = '';
+
+                if (rawSlotName.includes('1850')) {
+                    displayTitle = '1850';
+                    badgeHtml = hasLeaveOption 
+                        ? `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold"><i class="fa-solid fa-person-walking-luggage mr-1"></i>外散假</span>`
+                        : `<span class="px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 border border-gray-500/30 text-xs"><i class="fa-solid fa-ban mr-1"></i>無外散假</span>`;
+                }
+
+                const card = document.createElement('div');
+                card.className = "glass-panel p-4 rounded-xl border border-gh-border transition flex flex-col space-y-2";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-gh-border/50 pb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="px-2.5 py-1 bg-gh-blue/10 border border-gh-blue/30 rounded-lg text-gh-blue font-bold text-xs font-mono">
+                                ${displayTitle}
+                            </span>
+                            ${badgeHtml}
+                        </div>
+                        <button onclick="copySingleSlot('${displayTitle}', \`${escapeQuotes(content)}\`)" class="text-xs text-gh-muted hover:text-gh-blue px-2 py-1 rounded bg-gh-bg border border-gh-border transition flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> 複製
+                        </button>
+                    </div>
+                    <p class="text-xs text-gh-text whitespace-pre-line font-mono bg-gh-bg/60 p-3 rounded-lg border border-gh-border/50 leading-relaxed">${escapeHtml(content)}</p>
+                `;
+                container.appendChild(card);
+            }
+        }
+
+        function renderFullReportEditor() {
+            const container = document.getElementById('edit-day-panels');
+            container.innerHTML = '';
+
+            const currentWorkDayInfo = future5WorkDays[selectedWorkDayIdx];
+            const targetDateKey = currentWorkDayInfo.dateKey;
+            const colIndex = getColumnIndexByDateKey(targetDateKey);
+            const dateDisplay = `${currentWorkDayInfo.month}/${currentWorkDayInfo.date} (週${currentWorkDayInfo.dayLabel})`;
+
+            if (!appData.reports || appData.reports.length < 2 || colIndex === -1) {
+                container.innerHTML = `<div class="p-6 text-center text-gh-muted glass-panel rounded-xl">讀取資料中，請稍候...</div>`;
+                return;
+            }
+
+            for (let r = 1; r < appData.reports.length; r++) {
+                const rawSlotName = appData.reports[r][0] || '';
+                const val = appData.reports[r][colIndex] || '';
+
+                const block = document.createElement('div');
+                block.className = "glass-panel p-4 rounded-xl space-y-2 border border-gh-border";
+                block.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-tag text-gh-purple"></i> 時段: ${rawSlotName} 
+                            <span class="text-gh-purple font-mono text-xs">(${dateDisplay})</span>
+                        </label>
+                    </div>
+                    <textarea id="edit-cell-${r}" 
+                        data-slot="${rawSlotName}"
+                        rows="3" 
+                        class="w-full bg-gh-bg border border-gh-border rounded-lg p-2.5 text-xs text-gh-text font-mono focus:outline-none focus:border-gh-purple transition">${val}</textarea>
+                `;
+                container.appendChild(block);
+            }
+        }
+
+        async function saveCurrentDateToGAS() {
+            const gasUrl = localStorage.getItem('gas_web_app_url');
+            if (!gasUrl) {
+                showToast("請先至「設定」頁面輸入 GAS Web App 網址", "error");
+                switchTab('tab-settings');
+                return;
+            }
+
+            const currentWorkDayInfo = future5WorkDays[selectedWorkDayIdx];
+            const dateKey = currentWorkDayInfo.dateKey;
+
+            const payloadReports = [];
+            if (appData.reports) {
+                for (let r = 1; r < appData.reports.length; r++) {
+                    const textarea = document.getElementById(`edit-cell-${r}`);
+                    if (textarea) {
+                        payloadReports.push({
+                            slot: textarea.getAttribute('data-slot'),
+                            content: textarea.value
+                        });
+                    }
+                }
+            }
+
+            const btn = document.getElementById('save-gas-btn');
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 儲存中...`;
+
+            try {
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: "updateDateReport",
+                        dateKey: dateKey,
+                        reports: payloadReports
+                    })
+                });
+
+                if (response.ok) {
+                    showToast(`已成功寫入 ${dateKey} 之『差勤回報紀錄』！`, "success");
+                    refreshAllData();
+                } else {
+                    showToast("儲存失敗，請檢查權限設定", "error");
+                }
+            } catch (e) {
+                showToast("儲存失敗：請檢查網路連線或 GAS Web App URL 格式", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> 儲存此日變更`;
+            }
+        }
+
+        function renderDailyScheduleView() {
+            const targetDate = new Date();
+            if (selectedScheduleDay === 'tomorrow') targetDate.setDate(targetDate.getDate() + 1);
+            let dayOfWeek = targetDate.getDay();
+            if (dayOfWeek === 0 || dayOfWeek === 6) dayOfWeek = 1;
+
+            const colIndex = dayOfWeek + 1;
+            const timeline = document.getElementById('daily-schedule-timeline');
+            timeline.innerHTML = '';
+
+            if (!appData.schedule || appData.schedule.length < 2) return;
+
+            for (let r = 1; r < appData.schedule.length; r++) {
+                const row = appData.schedule[r];
+                const period = row[0] || '';
+                const time = row[1] || '';
+                const courseInfo = row[colIndex] || '自習 / 空堂';
+
+                const card = document.createElement('div');
+                card.className = "glass-panel p-4 rounded-xl border border-gh-border flex items-center justify-between hover:border-gh-gold/50 transition";
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="p-2.5 bg-gh-gold/10 border border-gh-gold/20 rounded-xl text-gh-gold font-bold text-center min-w-[70px]">
+                            <div class="text-xs">${period}</div>
+                            <div class="text-[10px] opacity-80 font-mono">${time}</div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">${escapeHtml(courseInfo)}</h3>
+                            <p class="text-xs text-gh-muted mt-0.5"><i class="fa-solid fa-location-dot text-xs mr-1"></i> 116 氣象教室</p>
+                        </div>
+                    </div>
+                `;
+                timeline.appendChild(card);
+            }
+        }
+
+        function renderWeeklyTimetable() {
+            const tbody = document.getElementById('weekly-timetable-body');
+            tbody.innerHTML = '';
+
+            if (!appData.schedule || appData.schedule.length < 2) return;
+
+            for (let r = 1; r < appData.schedule.length; r++) {
+                const row = appData.schedule[r];
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gh-card/50 transition border-b border-gh-border/50";
+
+                tr.innerHTML = `
+                    <td class="p-3 text-center border-r border-gh-border font-medium bg-gh-card/30">
+                        <div class="font-bold text-white text-xs">${row[0]}</div>
+                        <div class="text-[10px] text-gh-muted font-mono">${row[1]}</div>
+                    </td>
+                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[2] || '-')}</td>
+                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[3] || '-')}</td>
+                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[4] || '-')}</td>
+                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[5] || '-')}</td>
+                    <td class="p-3 text-xs text-center">${escapeHtml(row[6] || '-')}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById('btn-' + tabId).classList.add('active');
+
+            if (tabId === 'tab-full-report') renderFullReportEditor();
+            else if (tabId === 'tab-weekly-schedule') renderWeeklyTimetable();
+        }
+
+        function toggleLeaveOption(checked) {
+            hasLeaveOption = checked;
+            const statusText = document.getElementById('leave-status-text');
+            statusText.innerText = checked ? '開啟 (含外散)' : '關閉 (無外散)';
+            statusText.className = checked ? 'text-xs font-mono text-gh-purple font-bold' : 'text-xs font-mono text-gh-muted font-bold';
+            renderDailyReportView();
+        }
+
+        function updateDateBadge() {
+            const today = new Date();
+            const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+            document.getElementById('current-date-badge').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()} (${days[today.getDay()]})`;
+
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            document.getElementById('btn-day-today').innerText = `今日 (${today.getMonth()+1}/${today.getDate()})`;
+            document.getElementById('btn-day-tomorrow').innerText = `明日 (${tomorrow.getMonth()+1}/${tomorrow.getDate()})`;
+        }
+
+        function setReportDay(mode) {
+            selectedReportDay = mode;
+            document.getElementById('btn-day-today').className = mode === 'today' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-blue text-white shadow" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
+            document.getElementById('btn-day-tomorrow').className = mode === 'tomorrow' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-blue text-white shadow" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
+            renderDailyReportView();
+        }
+
+        function setScheduleDay(mode) {
+            selectedScheduleDay = mode;
+            document.getElementById('btn-sched-today').className = mode === 'today' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-gold text-black font-semibold" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
+            document.getElementById('btn-sched-tomorrow').className = mode === 'tomorrow' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-gold text-black font-semibold" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
+            renderDailyScheduleView();
+        }
+
+        function copySingleSlot(slot, content) {
+            copyToClipboard(`【116氣象組 差勤通報】\n▶ 時段：${slot}\n${content}`);
+        }
+
+        function copyFullDayReport() {
+            const targetDate = new Date();
+            if (selectedReportDay === 'tomorrow') targetDate.setDate(targetDate.getDate() + 1);
+            
+            const dateKey = formatDateKey(targetDate);
+            const colIndex = getColumnIndexByDateKey(dateKey);
+
+            let fullText = `=== 116氣象組 每日差勤通報 (${dateKey}) ===\n\n`;
+
+            if (appData.reports && appData.reports.length > 1 && colIndex !== -1) {
+                for (let r = 1; r < appData.reports.length; r++) {
+                    const rawSlotName = appData.reports[r][0];
+                    if (rawSlotName.includes('1850')) {
+                        if (hasLeaveOption && rawSlotName.includes('無外散假')) continue;
+                        if (!hasLeaveOption && rawSlotName.includes('有外散假')) continue;
+                    }
+                    const content = appData.reports[r][colIndex] || '無';
+                    fullText += `【${rawSlotName}】\n${content}\n--------------------\n`;
+                }
+            }
+
+            copyToClipboard(fullText);
+        }
+
+        function saveGASUrl() {
+            const url = document.getElementById('gas-url-input').value.trim();
+            if (url) {
+                localStorage.setItem('gas_web_app_url', url);
+                showToast("GAS 網址已儲存，同步中...", "success");
+                refreshAllData();
+            } else {
+                localStorage.removeItem('gas_web_app_url');
+                showToast("已清除 GAS 網址", "info");
+                refreshAllData();
+            }
+        }
+
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast("已成功複製到剪貼簿！", "success");
+            } catch (err) {
+                showToast("複製失敗", "error");
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = "bg-gh-card border-gh-border text-white";
+            let icon = "fa-circle-info text-gh-blue";
+
+            if (type === 'success') {
+                bgClass = "bg-emerald-950/90 border-emerald-500/50 text-emerald-200";
+                icon = "fa-circle-check text-emerald-400";
+            } else if (type === 'error') {
+                bgClass = "bg-rose-950/90 border-rose-500/50 text-rose-200";
+                icon = "fa-circle-exclamation text-rose-400";
+            }
+
+            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 text-xs font-medium ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i> <span>${escapeHtml(message)}</span>`;
+            container.appendChild(toast);
+
+            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        function escapeQuotes(str) {
+            if (!str) return '';
+            return String(str).replace(/`/g, '\\`').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
