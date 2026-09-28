@@ -36,8 +36,6 @@
     </script>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- PapaParse CSV Parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #0d1117; }
@@ -227,9 +225,11 @@
                     <div class="flex gap-2">
                         <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="flex-1 bg-gh-bg border border-gh-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gh-blue">
                         <button onclick="saveGASUrl()" class="px-4 py-2 bg-gh-blue hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition">
-                            儲存 URL
+                            儲存設定
                         </button>
                     </div>
+                    <label class="block text-xs font-semibold text-gh-text">編輯密碼（須與 GAS 指令碼屬性 EDIT_KEY 相同）:</label>
+                    <input type="password" id="gas-key-input" autocomplete="off" class="w-full bg-gh-bg border border-gh-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gh-blue">
                 </div>
             </div>
         </section>
@@ -239,7 +239,29 @@
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
-        const SPREADSHEET_ID = '1JnYPSeE5pd2IkBCcQJjc5WjKrkBiBG69gUW73RJJopg';
+        const WEEK = ['日','一','二','三','四','五','六'];
+        function todayKey() { return formatDateKey(new Date()); }
+        function keyToDate(k) { const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d, 12); }
+        function nextWorkdayKey(key, inclusive) {
+            const d = keyToDate(key);
+            if (!inclusive) d.setDate(d.getDate() + 1);
+            while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+            return formatDateKey(d);
+        }
+        // 「今日/明日」= 今天(或下一個上班日) / 再下一個上班日，週末不會找不到欄位
+        function reportDateKey(mode) {
+            const t = nextWorkdayKey(todayKey(), true);
+            return mode === 'tomorrow' ? nextWorkdayKey(t, false) : t;
+        }
+        // 外散假開關：依日期分別記憶
+        function getLeave(k) { try { return JSON.parse(localStorage.getItem('leave_map') || '{}')[k] !== false; } catch (e) { return true; } }
+        function setLeave(k, v) { try { const m = JSON.parse(localStorage.getItem('leave_map') || '{}'); m[k] = v; localStorage.setItem('leave_map', JSON.stringify(m)); } catch (e) {} }
+        function syncLeaveUI() {
+            document.getElementById('leave-toggle').checked = hasLeaveOption;
+            const t = document.getElementById('leave-status-text');
+            t.innerText = hasLeaveOption ? '開啟 (含外散)' : '關閉 (無外散)';
+            t.className = hasLeaveOption ? 'text-xs font-mono text-gh-purple font-bold' : 'text-xs font-mono text-gh-muted font-bold';
+        }
 
         let appData = { reports: [], schedule: [] };
         let selectedReportDay = 'today'; 
@@ -251,9 +273,14 @@
         window.addEventListener('DOMContentLoaded', () => {
             const savedGasUrl = localStorage.getItem('gas_web_app_url');
             if (savedGasUrl) document.getElementById('gas-url-input').value = savedGasUrl;
+            document.getElementById('gas-key-input').value = localStorage.getItem('gas_edit_key') || '';
             updateDateBadge();
             generate5WorkDays();
             refreshAllData();
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) { updateDateBadge(); generate5WorkDays(); refreshAllData(); }
         });
 
         function formatDateKey(dateObj) {
@@ -329,12 +356,15 @@
             refreshIcon.classList.add('animate-spin');
 
             const gasUrl = localStorage.getItem('gas_web_app_url');
+            let failReason = '';
             if (gasUrl) {
                 try {
-                    const response = await fetch(gasUrl);
+                    const response = await fetch(gasUrl, { cache: 'no-store' });
+                    if (!response.ok) failReason = 'HTTP ' + response.status;
                     if (response.ok) {
                         const json = await response.json();
-                        if (json.reports && json.schedule) {
+                        if (json.ok === false) failReason = 'GAS 程式錯誤：' + json.error;
+                        if (json.ok !== false && json.reports && json.schedule) {
                             appData.reports = json.reports;
                             appData.schedule = json.schedule;
                             updateBadgeStatus('gas');
@@ -343,20 +373,17 @@
                             return;
                         }
                     }
-                } catch (e) { console.warn("GAS 讀取失敗，自動嘗試 CSV 模式", e); }
+                } catch (e) {
+                    failReason = (e instanceof SyntaxError) ? '回傳內容不是 JSON（多半是部署權限不是「所有人」，或程式需要重新授權）' : '無法連線（網址錯誤、被瀏覽器/網路擋下，或 CORS）';
+                    console.warn("GAS 讀取失敗", e);
+                }
             }
 
-            try {
-                const reportCsvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('差勤回報紀錄')}`;
-                const scheduleCsvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('課表')}`;
-                const [repRes, schedRes] = await Promise.all([fetch(reportCsvUrl).then(r => r.text()), fetch(scheduleCsvUrl).then(r => r.text())]);
-
-                appData.reports = Papa.parse(repRes, { skipEmptyLines: true }).data;
-                appData.schedule = Papa.parse(schedRes, { skipEmptyLines: true }).data;
-                updateBadgeStatus('csv');
-                renderAllViews();
-                refreshIcon.classList.remove('animate-spin');
-            } catch (e) { console.warn("CSV 讀取失敗", e); }
+            refreshIcon.classList.remove('animate-spin');
+            statusBadge.className = "text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1 font-normal";
+            statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${gasUrl ? '同步失敗' : '尚未設定 GAS 網址'}`;
+            statusBadge.title = failReason;
+            if (failReason) showToast(failReason, 'error');
         }
 
         function updateBadgeStatus(type) {
@@ -375,13 +402,13 @@
             renderDailyScheduleView();
             renderWeeklyTimetable();
             renderEditDayButtons();
+            if (!document.getElementById('tab-full-report').classList.contains('hidden')) renderFullReportEditor();
         }
 
         function renderDailyReportView() {
-            const targetDate = new Date();
-            if (selectedReportDay === 'tomorrow') targetDate.setDate(targetDate.getDate() + 1);
-            
-            const targetDateKey = formatDateKey(targetDate);
+            const targetDateKey = reportDateKey(selectedReportDay);
+            hasLeaveOption = getLeave(targetDateKey);
+            syncLeaveUI();
             const colIndex = getColumnIndexByDateKey(targetDateKey);
             const container = document.getElementById('daily-report-cards-container');
             container.innerHTML = '';
@@ -395,6 +422,7 @@
                 const row = appData.reports[r];
                 const rawSlotName = row[0] || '';
                 const content = row[colIndex] || '無特別紀錄';
+                if (rawSlotName.trim() === '外散' && !hasLeaveOption) continue;
 
                 if (rawSlotName.includes('1850')) {
                     if (hasLeaveOption && rawSlotName.includes('無外散假')) continue;
@@ -417,16 +445,17 @@
                     <div class="flex items-center justify-between border-b border-gh-border/50 pb-2">
                         <div class="flex items-center gap-2">
                             <span class="px-2.5 py-1 bg-gh-blue/10 border border-gh-blue/30 rounded-lg text-gh-blue font-bold text-xs font-mono">
-                                ${displayTitle}
+                                ${escapeHtml(displayTitle)}
                             </span>
                             ${badgeHtml}
                         </div>
-                        <button onclick="copySingleSlot('${displayTitle}', \`${escapeQuotes(content)}\`)" class="text-xs text-gh-muted hover:text-gh-blue px-2 py-1 rounded bg-gh-bg border border-gh-border transition flex items-center gap-1">
+                        <button data-copy class="text-xs text-gh-muted hover:text-gh-blue px-2 py-1 rounded bg-gh-bg border border-gh-border transition flex items-center gap-1">
                             <i class="fa-regular fa-copy"></i> 複製
                         </button>
                     </div>
                     <p class="text-xs text-gh-text whitespace-pre-line font-mono bg-gh-bg/60 p-3 rounded-lg border border-gh-border/50 leading-relaxed">${escapeHtml(content)}</p>
                 `;
+                card.querySelector('[data-copy]').addEventListener('click', () => copySingleSlot(displayTitle, content));
                 container.appendChild(card);
             }
         }
@@ -454,14 +483,15 @@
                 block.innerHTML = `
                     <div class="flex items-center justify-between">
                         <label class="text-sm font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-tag text-gh-purple"></i> 時段: ${rawSlotName} 
+                            <i class="fa-solid fa-tag text-gh-purple"></i> 時段: ${escapeHtml(rawSlotName)} 
                             <span class="text-gh-purple font-mono text-xs">(${dateDisplay})</span>
                         </label>
                     </div>
                     <textarea id="edit-cell-${r}" 
-                        data-slot="${rawSlotName}"
+                        data-slot="${escapeHtml(rawSlotName)}"
+                        data-original="${escapeHtml(val)}"
                         rows="3" 
-                        class="w-full bg-gh-bg border border-gh-border rounded-lg p-2.5 text-xs text-gh-text font-mono focus:outline-none focus:border-gh-purple transition">${val}</textarea>
+                        class="w-full bg-gh-bg border border-gh-border rounded-lg p-2.5 text-xs text-gh-text font-mono focus:outline-none focus:border-gh-purple transition">${escapeHtml(val)}</textarea>
                 `;
                 container.appendChild(block);
             }
@@ -483,13 +513,17 @@
                 for (let r = 1; r < appData.reports.length; r++) {
                     const textarea = document.getElementById(`edit-cell-${r}`);
                     if (textarea) {
-                        payloadReports.push({
-                            slot: textarea.getAttribute('data-slot'),
-                            content: textarea.value
-                        });
+                        const orig = (textarea.getAttribute('data-original') || '').replace(/\r\n/g, '\n');
+                        if (textarea.value.replace(/\r\n/g, '\n') !== orig) {
+                            payloadReports.push({ slot: textarea.getAttribute('data-slot'), content: textarea.value });
+                        }
                     }
                 }
             }
+
+            const editKey = localStorage.getItem('gas_edit_key') || '';
+            if (!editKey) { showToast("請先至「設定」輸入編輯密碼", "error"); switchTab('tab-settings'); return; }
+            if (!payloadReports.length) { showToast("沒有任何變更", "info"); return; }
 
             const btn = document.getElementById('save-gas-btn');
             btn.disabled = true;
@@ -501,16 +535,18 @@
                     headers: { 'Content-Type': 'text/plain' },
                     body: JSON.stringify({
                         action: "updateDateReport",
+                        key: editKey,
                         dateKey: dateKey,
                         reports: payloadReports
                     })
                 });
 
-                if (response.ok) {
-                    showToast(`已成功寫入 ${dateKey} 之『差勤回報紀錄』！`, "success");
+                const result = await response.json().catch(() => null);
+                if (response.ok && result && result.ok) {
+                    showToast(`已寫入 ${dateKey}（${result.updated} 個時段）`, "success");
                     refreshAllData();
                 } else {
-                    showToast("儲存失敗，請檢查權限設定", "error");
+                    showToast("儲存失敗：" + ((result && result.error) || "請檢查部署權限"), "error");
                 }
             } catch (e) {
                 showToast("儲存失敗：請檢查網路連線或 GAS Web App URL 格式", "error");
@@ -521,10 +557,7 @@
         }
 
         function renderDailyScheduleView() {
-            const targetDate = new Date();
-            if (selectedScheduleDay === 'tomorrow') targetDate.setDate(targetDate.getDate() + 1);
-            let dayOfWeek = targetDate.getDay();
-            if (dayOfWeek === 0 || dayOfWeek === 6) dayOfWeek = 1;
+            const dayOfWeek = keyToDate(reportDateKey(selectedScheduleDay)).getDay();
 
             const colIndex = dayOfWeek + 1;
             const timeline = document.getElementById('daily-schedule-timeline');
@@ -536,7 +569,7 @@
                 const row = appData.schedule[r];
                 const period = row[0] || '';
                 const time = row[1] || '';
-                const courseInfo = row[colIndex] || '自習 / 空堂';
+                const courseInfo = row[colIndex] || '（無課程）';
 
                 const card = document.createElement('div');
                 card.className = "glass-panel p-4 rounded-xl border border-gh-border flex items-center justify-between hover:border-gh-gold/50 transition";
@@ -548,7 +581,6 @@
                         </div>
                         <div>
                             <h3 class="text-sm font-bold text-white">${escapeHtml(courseInfo)}</h3>
-                            <p class="text-xs text-gh-muted mt-0.5"><i class="fa-solid fa-location-dot text-xs mr-1"></i> 116 氣象教室</p>
                         </div>
                     </div>
                 `;
@@ -594,21 +626,19 @@
 
         function toggleLeaveOption(checked) {
             hasLeaveOption = checked;
-            const statusText = document.getElementById('leave-status-text');
-            statusText.innerText = checked ? '開啟 (含外散)' : '關閉 (無外散)';
-            statusText.className = checked ? 'text-xs font-mono text-gh-purple font-bold' : 'text-xs font-mono text-gh-muted font-bold';
+            setLeave(reportDateKey(selectedReportDay), checked);
             renderDailyReportView();
         }
 
         function updateDateBadge() {
-            const today = new Date();
-            const days = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
-            document.getElementById('current-date-badge').innerText = `${today.getFullYear()}/${today.getMonth()+1}/${today.getDate()} (${days[today.getDay()]})`;
-
-            const tomorrow = new Date(today);
-            tomorrow.setDate(today.getDate() + 1);
-            document.getElementById('btn-day-today').innerText = `今日 (${today.getMonth()+1}/${today.getDate()})`;
-            document.getElementById('btn-day-tomorrow').innerText = `明日 (${tomorrow.getMonth()+1}/${tomorrow.getDate()})`;
+            const t = new Date();
+            document.getElementById('current-date-badge').innerText = `${t.getFullYear()}/${t.getMonth()+1}/${t.getDate()} (週${WEEK[t.getDay()]})`;
+            [['today','今日'],['tomorrow','明日']].forEach(([mode, name]) => {
+                const d = keyToDate(reportDateKey(mode));
+                const label = `${name} (${d.getMonth()+1}/${d.getDate()} 週${WEEK[d.getDay()]})`;
+                document.getElementById(mode === 'today' ? 'btn-day-today' : 'btn-day-tomorrow').innerText = label;
+                document.getElementById(mode === 'today' ? 'btn-sched-today' : 'btn-sched-tomorrow').innerText = label;
+            });
         }
 
         function setReportDay(mode) {
@@ -626,21 +656,21 @@
         }
 
         function copySingleSlot(slot, content) {
-            copyToClipboard(`【116氣象組 差勤通報】\n▶ 時段：${slot}\n${content}`);
+            copyToClipboard(`▶ 時段：${slot}\n${content}`);
         }
 
         function copyFullDayReport() {
-            const targetDate = new Date();
-            if (selectedReportDay === 'tomorrow') targetDate.setDate(targetDate.getDate() + 1);
-            
-            const dateKey = formatDateKey(targetDate);
+            const dateKey = reportDateKey(selectedReportDay);
+            hasLeaveOption = getLeave(dateKey);
+            syncLeaveUI();
             const colIndex = getColumnIndexByDateKey(dateKey);
 
-            let fullText = `=== 116氣象組 每日差勤通報 (${dateKey}) ===\n\n`;
+            let fullText = `=== 116氣象組 每日通報 (${dateKey}) ===\n\n`;
 
             if (appData.reports && appData.reports.length > 1 && colIndex !== -1) {
                 for (let r = 1; r < appData.reports.length; r++) {
                     const rawSlotName = appData.reports[r][0];
+                    if (rawSlotName.trim() === '外散' && !hasLeaveOption) continue;
                     if (rawSlotName.includes('1850')) {
                         if (hasLeaveOption && rawSlotName.includes('無外散假')) continue;
                         if (!hasLeaveOption && rawSlotName.includes('有外散假')) continue;
@@ -655,6 +685,7 @@
 
         function saveGASUrl() {
             const url = document.getElementById('gas-url-input').value.trim();
+            localStorage.setItem('gas_edit_key', document.getElementById('gas-key-input').value.trim());
             if (url) {
                 localStorage.setItem('gas_web_app_url', url);
                 showToast("GAS 網址已儲存，同步中...", "success");
