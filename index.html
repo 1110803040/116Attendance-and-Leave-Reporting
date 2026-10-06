@@ -1,750 +1,2551 @@
-<!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<!doctype html>
+<html lang="zh-Hant" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>116氣象組 差勤通報系統</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        gh: {
-                            bg: '#0d1117',
-                            card: '#161b22',
-                            border: '#30363d',
-                            header: '#161b22',
-                            text: '#c9d1d9',
-                            muted: '#8b949e',
-                            accent: '#238636',
-                            accentHover: '#2ea043',
-                            blue: '#58a6ff',
-                            purple: '#bc8cff',
-                            gold: '#d29922',
-                            red: '#f85149'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'SF Pro Text', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0d1117; }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #484f58; }
-        .glass-panel {
-            background: rgba(22, 27, 34, 0.85);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(48, 54, 61, 0.8);
-        }
-        .tab-btn.active {
-            border-bottom: 2px solid #58a6ff;
-            color: #58a6ff;
-            background-color: rgba(88, 166, 255, 0.08);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>116 氣象組｜差勤中控台 v9.5.2 · 自習節次地點</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        ink: '#0b1220',
+        panel: '#111827',
+        line: '#263244',
+        muted: '#94a3b8',
+        accent: '#60a5fa',
+        good: '#34d399',
+        warn: '#fbbf24',
+        bad: '#fb7185',
+        soft: '#a78bfa'
+      },
+      boxShadow: {
+        soft: '0 12px 40px rgba(0,0,0,.22)',
+        glow: '0 0 0 1px rgba(96,165,250,.25)'
+      },
+      fontFamily: {
+        sans: ['"Noto Sans TC"', 'system-ui', 'sans-serif']
+      }
+    }
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+  :root {
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html, body {
+    background: #0b1220;
+    color: #e5e7eb;
+    font-family: "Noto Sans TC", system-ui, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #334155 transparent;
+  }
+  .card {
+    background: rgba(17, 24, 39, .92);
+    border: 1px solid rgba(51, 65, 85, .65);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .14);
+  }
+  .nav-active {
+    background: rgba(96, 165, 250, .14);
+    color: #93c5fd;
+    border-color: rgba(96, 165, 250, .4);
+  }
+  .fade {
+    animation: fade .18s ease-out;
+  }
+  @keyframes fade {
+    from { opacity: .35; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: .45; }
+    50% { opacity: .9; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: none; }
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    animation: pulse-soft 1.4s ease-in-out infinite;
+    border-radius: .75rem;
+  }
+  textarea { resize: vertical; }
+  .safe-bottom {
+    padding-bottom: calc(96px + var(--safe-bottom));
+  }
+  @media (min-width: 1024px) {
+    .safe-bottom { padding-bottom: 1.5rem; }
+  }
+  .sidebar-link {
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .toggle-track {
+    width: 2.75rem;
+    height: 1.5rem;
+    border-radius: 9999px;
+    background: #334155;
+    position: relative;
+    transition: background .2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    background: white;
+    transition: transform .2s;
+  }
+  input:checked + .toggle-track {
+    background: #8b5cf6;
+  }
+  input:checked + .toggle-track::after {
+    transform: translateX(1.25rem);
+  }
+  /* v9.3 UI */
+  .btn-primary {
+    min-height: 44px;
+    font-weight: 700;
+    transition: transform .12s, filter .12s, background .15s;
+  }
+  .btn-primary:active { transform: scale(.97); }
+  .chip {
+    min-height: 36px;
+    padding: .4rem .75rem;
+    border-radius: .75rem;
+    border: 1px solid rgba(51, 65, 85, .9);
+    background: rgba(15, 23, 42, .7);
+    font-size: 12px;
+    color: #cbd5e1;
+    transition: background .12s, border-color .12s, color .12s, transform .1s;
+    white-space: nowrap;
+  }
+  .chip:active { transform: scale(.96); }
+  .chip-on {
+    border-color: rgba(139, 92, 246, .55);
+    background: rgba(139, 92, 246, .18);
+    color: #ddd6fe;
+    font-weight: 600;
+  }
+  .chip-period-on {
+    border-color: rgba(96, 165, 250, .5);
+    background: rgba(96, 165, 250, .16);
+    color: #bfdbfe;
+    font-weight: 600;
+  }
+  .chip-type-on {
+    border-color: rgba(52, 211, 153, .45);
+    background: rgba(52, 211, 153, .14);
+    color: #a7f3d0;
+    font-weight: 600;
+  }
+  .seg {
+    display: inline-flex;
+    border-radius: .9rem;
+    border: 1px solid rgba(51, 65, 85, .9);
+    overflow: hidden;
+    background: #0f172a;
+  }
+  .seg button {
+    min-height: 40px;
+    padding: 0 .9rem;
+    font-size: 13px;
+    color: #94a3b8;
+    transition: background .15s, color .15s;
+  }
+  .seg button.seg-on {
+    background: rgba(96, 165, 250, .16);
+    color: #bfdbfe;
+    font-weight: 700;
+  }
+  .seg-danger button.seg-on {
+    background: rgba(251, 113, 133, .18);
+    color: #fecdd3;
+  }
+  .h-scroll {
+    display: flex;
+    gap: .5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .h-scroll::-webkit-scrollbar { display: none; }
+  .step-dot {
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 800;
+    display: grid;
+    place-items: center;
+    background: #1e293b;
+    color: #64748b;
+    border: 1px solid #334155;
+  }
+  .step-dot.on {
+    background: rgba(139, 92, 246, .25);
+    color: #c4b5fd;
+    border-color: rgba(139, 92, 246, .5);
+  }
+  .stat-card {
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    right: -8px;
+    bottom: -12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    opacity: .12;
+  }
+  .mobile-nav-item {
+    position: relative;
+    min-height: 56px;
+  }
+  .mobile-nav-item.nav-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 28px;
+    height: 3px;
+    border-radius: 0 0 4px 4px;
+    background: #60a5fa;
+  }
+  #toast > div {
+    animation: slide-up .22s ease-out;
+  }
+</style>
 </head>
-<body class="bg-gh-bg text-gh-text min-h-screen flex flex-col font-sans selection:bg-gh-blue selection:text-white">
+<body class="min-h-screen lg:flex">
 
-    <!-- 頂部導覽列 -->
-    <header class="sticky top-0 z-40 bg-gh-header/90 backdrop-blur-md border-b border-gh-border px-4 py-3 shadow-md">
-        <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center space-x-3">
-                <div class="p-2 bg-gh-blue/10 border border-gh-blue/30 rounded-xl text-gh-blue">
-                    <i class="fa-solid fa-cloud-sun-rain text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                        116氣象組 差勤通報與課表系統
-                        <span id="data-status-badge" class="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 flex items-center gap-1 font-normal">
-                            <i class="fa-solid fa-spinner animate-spin text-[10px]"></i> 載入中...
-                        </span>
-                    </h1>
-                    <p class="text-xs text-gh-muted">資料庫：<span class="font-mono text-gh-blue">差勤回報紀錄 (固定維持預估後 5 天)</span></p>
-                </div>
-            </div>
+<!-- Desktop Sidebar -->
+<aside class="hidden lg:flex flex-col w-64 shrink-0 border-r border-slate-800 bg-[#0b1220]/95 sticky top-0 h-screen">
+  <div class="px-5 h-16 flex items-center gap-3 border-b border-slate-800">
+    <div class="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-400/25 grid place-items-center text-blue-300">
+      <i class="fa-solid fa-cloud-sun-rain"></i>
+    </div>
+    <div class="min-w-0">
+      <div class="font-bold text-white text-sm truncate">116 氣象組</div>
+      <div class="text-[11px] text-slate-500">差勤中控台 v9.5.2 · 自習節次地點</div>
+    </div>
+  </div>
+  <nav class="flex-1 p-3 space-y-1">
+    <button data-nav="dashboard" onclick="showView('dashboard')" class="sidebar-link navBtn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 border border-transparent hover:bg-slate-900">
+      <i class="fa-solid fa-gauge w-5 text-center"></i>總覽
+    </button>
+    <button data-nav="daily" onclick="showView('daily')" class="sidebar-link navBtn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 border border-transparent hover:bg-slate-900">
+      <i class="fa-solid fa-bullhorn w-5 text-center"></i>每日通報
+    </button>
+    <button data-nav="schedule" onclick="showView('schedule')" class="sidebar-link navBtn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 border border-transparent hover:bg-slate-900">
+      <i class="fa-solid fa-calendar-week w-5 text-center"></i>一週課表
+    </button>
+    <button data-nav="manage" onclick="showView('manage')" class="sidebar-link navBtn w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 border border-transparent hover:bg-slate-900">
+      <i class="fa-solid fa-pen-to-square w-5 text-center"></i>資料管理
+    </button>
+  </nav>
+  <div class="p-4 border-t border-slate-800 space-y-2">
+    <div id="roleBadgeDesktop" class="text-xs px-3 py-2 rounded-xl border border-slate-700 text-slate-400 text-center">未登入</div>
+    <button onclick="showSettings()" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-sm">
+      <i class="fa-solid fa-gear"></i>連線設定
+    </button>
+  </div>
+</aside>
 
-            <div class="flex items-center gap-2">
-                <button onclick="refreshAllData()" title="重新同步資料" class="p-2 text-gh-muted hover:text-white bg-gh-border/40 hover:bg-gh-border rounded-lg border border-gh-border transition flex items-center gap-1 text-xs">
-                    <i class="fa-solid fa-rotate text-xs" id="refresh-icon"></i>
-                    <span class="hidden sm:inline">重新同步</span>
-                </button>
-                <button onclick="switchTab('tab-settings')" class="p-2 text-gh-muted hover:text-white bg-gh-border/40 hover:bg-gh-border rounded-lg border border-gh-border transition flex items-center gap-1 text-xs">
-                    <i class="fa-solid fa-gear text-xs"></i>
-                    <span class="hidden sm:inline">設定</span>
-                </button>
-            </div>
+<div class="flex-1 min-w-0 flex flex-col">
+  <!-- Top bar -->
+  <header class="sticky top-0 z-50 border-b border-slate-800/90 bg-[#0b1220]/90 backdrop-blur-xl">
+    <div class="max-w-6xl mx-auto px-4 lg:px-6 h-14 lg:h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0 lg:hidden">
+        <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-400/25 grid place-items-center text-blue-300 shrink-0">
+          <i class="fa-solid fa-cloud-sun-rain"></i>
         </div>
-    </header>
-
-    <!-- 分頁選單 -->
-    <nav class="bg-gh-card border-b border-gh-border px-4 sticky top-[61px] z-30 shadow-sm">
-        <div class="max-w-4xl mx-auto flex space-x-1 overflow-x-auto no-scrollbar">
-            <button onclick="switchTab('tab-daily-report')" id="btn-tab-daily-report" class="tab-btn active px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
-                <i class="fa-solid fa-bullhorn text-gh-blue"></i> 當日通報
-            </button>
-            <button onclick="switchTab('tab-full-report')" id="btn-tab-full-report" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
-                <i class="fa-solid fa-pen-to-square text-gh-purple"></i> 預估 5 天編輯
-            </button>
-            <button onclick="switchTab('tab-daily-schedule')" id="btn-tab-daily-schedule" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
-                <i class="fa-solid fa-calendar-day text-gh-gold"></i> 當日課表
-            </button>
-            <button onclick="switchTab('tab-weekly-schedule')" id="btn-tab-weekly-schedule" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
-                <i class="fa-solid fa-table text-gh-accent"></i> 週課表總覽
-            </button>
-            <button onclick="switchTab('tab-settings')" id="btn-tab-settings" class="tab-btn px-4 py-3 text-sm font-medium whitespace-nowrap transition flex items-center gap-2 text-gh-muted hover:text-gh-text">
-                <i class="fa-solid fa-sliders text-gray-400"></i> 設定
-            </button>
+        <div class="min-w-0">
+          <div class="font-bold text-white text-sm truncate">116 氣象組 · 差勤</div>
+          <div id="subTitleMobile" class="text-[11px] text-slate-400 truncate">同步中…</div>
         </div>
-    </nav>
+      </div>
+      <div class="hidden lg:block min-w-0">
+        <div id="subTitle" class="text-sm text-slate-400 truncate">同步中…</div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="roleBadge" class="hidden sm:inline-flex px-2.5 py-1 rounded-full text-[11px] border border-slate-700 text-slate-400">未登入</span>
+        <button id="refreshBtn" onclick="loadData()" title="重新同步" class="w-9 h-9 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 grid place-items-center">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+        <button onclick="showSettings()" class="lg:hidden w-9 h-9 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 grid place-items-center">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+      </div>
+    </div>
+  </header>
 
-    <!-- 主要內容區 -->
-    <main class="flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 space-y-6">
-
-        <!-- TAB 1: 當日通報 -->
-        <section id="tab-daily-report" class="tab-content space-y-4">
-            <div class="sticky top-[106px] z-20 glass-panel p-4 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-lg border border-gh-border/80">
-                <div class="flex items-center gap-3">
-                    <span id="current-date-badge" class="px-3 py-1 bg-gh-blue/10 border border-gh-blue/30 rounded-lg text-gh-blue font-semibold text-sm"></span>
-                    <div class="flex bg-gh-bg border border-gh-border rounded-lg p-1">
-                        <button onclick="setReportDay('today')" id="btn-day-today" class="px-3 py-1 text-xs rounded-md font-medium transition bg-gh-blue text-white shadow">今日</button>
-                        <button onclick="setReportDay('tomorrow')" id="btn-day-tomorrow" class="px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition">明日</button>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3 bg-gh-bg px-3 py-1.5 rounded-lg border border-gh-border">
-                    <span class="text-xs font-semibold text-gh-text flex items-center gap-1.5">
-                        <i class="fa-solid fa-person-walking-luggage text-gh-purple"></i> 外散假切換:
-                    </span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="leave-toggle" class="sr-only peer" onchange="toggleLeaveOption(this.checked)" checked>
-                        <div class="w-9 h-5 bg-gh-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-gh-purple"></div>
-                    </label>
-                    <span id="leave-status-text" class="text-xs font-mono text-gh-purple font-bold">開啟 (含外散)</span>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <button onclick="copyFullDayReport()" class="px-4 py-2 bg-gh-accent hover:bg-gh-accentHover text-white rounded-lg font-medium text-sm transition flex items-center gap-2 shadow">
-                        <i class="fa-solid fa-copy"></i> 複製當日通報
-                    </button>
-                </div>
+  <main class="max-w-6xl mx-auto w-full px-4 lg:px-6 pt-5 safe-bottom flex-1">
+    <!-- Dashboard -->
+    <section id="view-dashboard" class="view fade space-y-4">
+      <!-- Hero：主要操作只留 2 個，其餘收合 -->
+      <div class="card rounded-3xl p-4 lg:p-6 overflow-hidden relative">
+        <div class="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+        <div class="relative">
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="min-w-0">
+              <div id="todayLabel" class="text-xs text-blue-300 font-medium mb-1">—</div>
+              <h1 class="text-xl lg:text-2xl font-black tracking-tight text-white">差勤總覽</h1>
             </div>
+            <button type="button" onclick="document.getElementById('moreActions').classList.toggle('hidden')" class="lg:hidden w-10 h-10 rounded-xl border border-slate-700 bg-slate-900 grid place-items-center text-slate-300" aria-label="更多操作">
+              <i class="fa-solid fa-ellipsis"></i>
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-2 lg:flex lg:flex-wrap">
+            <button onclick="openDaily(todayKey())" class="btn-primary col-span-1 px-4 py-3 rounded-2xl bg-blue-500 hover:bg-blue-400 text-slate-950 text-sm">
+              <i class="fa-solid fa-bullhorn mr-1.5"></i>今日通報
+            </button>
+            <button onclick="copyReport(todayKey())" class="btn-primary col-span-1 px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-sm font-semibold">
+              <i class="fa-regular fa-copy mr-1.5"></i>複製今日
+            </button>
+            <button onclick="copyTomorrow()" class="btn-primary hidden lg:inline-flex px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm">
+              <i class="fa-regular fa-copy mr-1.5"></i>複製明日
+            </button>
+            <button onclick="openDaily(nextWorkdayKey())" class="btn-primary hidden lg:inline-flex px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-semibold">
+              <i class="fa-solid fa-forward mr-1.5"></i>明日通報
+            </button>
+            <button onclick="copyPrevToToday()" class="btn-primary hidden lg:inline-flex px-4 py-3 rounded-2xl bg-amber-600/90 hover:bg-amber-500 text-white text-sm" title="把前一工作日內容寫入今日">
+              <i class="fa-solid fa-clock-rotate-left mr-1.5"></i>前一日→今日
+            </button>
+          </div>
+          <div id="moreActions" class="hidden mt-2 grid grid-cols-2 gap-2 lg:hidden">
+            <button onclick="copyTomorrow()" class="btn-primary px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm">
+              <i class="fa-regular fa-copy mr-1"></i>複製明日
+            </button>
+            <button onclick="openDaily(nextWorkdayKey())" class="btn-primary px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm font-semibold">
+              <i class="fa-solid fa-forward mr-1"></i>明日通報
+            </button>
+            <button onclick="copyPrevToToday()" class="btn-primary col-span-2 px-3 py-2.5 rounded-xl bg-amber-600/90 text-white text-sm">
+              <i class="fa-solid fa-clock-rotate-left mr-1"></i>前一日 → 今日
+            </button>
+          </div>
+        </div>
+      </div>
 
-            <div class="flex flex-col space-y-3" id="daily-report-cards-container"></div>
-        </section>
+      <!-- 統計：圖示 + 數字 -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div class="card stat-card rounded-2xl p-3.5">
+          <div class="flex items-center gap-2 text-[11px] text-slate-400"><i class="fa-solid fa-users text-slate-500"></i>今日應到</div>
+          <div id="statTotal" class="text-2xl font-black mt-1 tabular-nums">—</div>
+        </div>
+        <div class="card stat-card rounded-2xl p-3.5">
+          <div class="flex items-center gap-2 text-[11px] text-slate-400"><i class="fa-solid fa-user-check text-emerald-500/80"></i>今日實到</div>
+          <div id="statActual" class="text-2xl font-black mt-1 text-emerald-300 tabular-nums">—</div>
+        </div>
+        <div class="card stat-card rounded-2xl p-3.5">
+          <div class="flex items-center gap-2 text-[11px] text-slate-400"><i class="fa-solid fa-user-xmark text-rose-400/80"></i>今日缺勤</div>
+          <div id="statAbsent" class="text-2xl font-black mt-1 text-rose-300 tabular-nums">—</div>
+        </div>
+        <div class="card stat-card rounded-2xl p-3.5">
+          <div class="flex items-center gap-2 text-[11px] text-slate-400"><i class="fa-solid fa-arrows-rotate text-amber-400/80"></i>本週異動</div>
+          <div id="statChanges" class="text-2xl font-black mt-1 text-amber-300 tabular-nums">—</div>
+        </div>
+      </div>
 
-        <!-- TAB 2: 預估 5 天編輯 -->
-        <section id="tab-full-report" class="tab-content hidden space-y-4">
-            <div class="sticky top-[106px] z-20 space-y-3 bg-gh-bg/95 backdrop-blur-md pt-2 pb-3 border-b border-gh-border/60">
-                <div class="glass-panel p-4 rounded-xl flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <h2 class="text-base font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-calendar-days text-gh-purple"></i> 預估未來 5 個工作天編輯區
-                        </h2>
-                        <p class="text-xs text-gh-muted">系統已根據各星期的預設範本自動生成。修改後點擊儲存，將寫入『差勤回報紀錄』。</p>
-                    </div>
-                    <button onclick="saveCurrentDateToGAS()" id="save-gas-btn" class="px-4 py-2 bg-gh-purple hover:bg-purple-600 text-white rounded-lg font-medium text-sm transition flex items-center gap-2 shadow">
-                        <i class="fa-solid fa-floppy-disk"></i> 儲存此日變更
-                    </button>
-                </div>
+      <!-- 快速登錄：步驟化 + chip 選取 -->
+      <div class="card rounded-3xl p-4 lg:p-5 border border-violet-500/20">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="font-bold text-white text-base">快速登錄</h2>
+            <p class="text-[11px] text-slate-500 mt-0.5">全程點選姓名／狀態／時段；僅備註可打字</p>
+          </div>
+          <div class="flex items-center gap-1.5 text-[10px] text-slate-500">
+            <span class="step-dot on" id="step1">1</span>
+            <span class="text-slate-700">—</span>
+            <span class="step-dot" id="step2">2</span>
+            <span class="text-slate-700">—</span>
+            <span class="step-dot" id="step3">3</span>
+          </div>
+        </div>
 
-                <!-- 未來 5 個工作天標籤頁 -->
-                <div id="edit-day-buttons-container" class="flex space-x-2 overflow-x-auto pb-1 no-scrollbar"></div>
+        <!-- 日期 + 模式 -->
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <div class="seg" id="quickDateSeg">
+            <button type="button" data-date="today" class="seg-on" onclick="setQuickDate('today')">今日</button>
+            <button type="button" data-date="tomorrow" onclick="setQuickDate('tomorrow')">明日</button>
+          </div>
+          <div class="seg seg-danger" id="quickModeSeg">
+            <button type="button" id="modeAddBtn" onclick="setQuickMode('add')" class="seg-on">加入</button>
+            <button type="button" id="modeRemoveBtn" onclick="setQuickMode('remove')">移除</button>
+          </div>
+          <button type="button" onclick="suggestPeriodByTime()" class="chip text-slate-300">
+            <i class="fa-regular fa-clock mr-1"></i>自動時段
+          </button>
+        </div>
+        <select id="quickDate" class="hidden">
+          <option value="today">今日</option>
+          <option value="tomorrow">明日</option>
+        </select>
+
+        <!-- ① 人員 -->
+        <div class="mb-3">
+          <div class="text-[11px] font-semibold text-slate-400 mb-1.5">① 選擇人員</div>
+          <div id="quickMemberChips" class="flex flex-wrap gap-1.5"></div>
+          <select id="quickMember" class="sr-only" aria-hidden="true"><option value="">選擇人員</option></select>
+        </div>
+
+        <!-- ② 狀態（chip） -->
+        <div class="mb-3" id="quickTypeBlock">
+          <div class="text-[11px] font-semibold text-slate-400 mb-1.5">② 選擇狀態</div>
+          <div id="quickTypeChips" class="h-scroll pb-1"></div>
+          <select id="quickType" class="sr-only" aria-hidden="true"><option value="">選擇狀態</option></select>
+        </div>
+
+        <!-- ③ 時段（chip） -->
+        <div class="mb-4">
+          <div class="text-[11px] font-semibold text-slate-400 mb-1.5">③ 選擇時段</div>
+          <div id="quickPeriodChips" class="h-scroll pb-1"></div>
+          <select id="quickPeriod" class="sr-only" aria-hidden="true">
+            <option value="">選擇時段</option>
+            <option value="全天">全天</option>
+            <option value="上午">上午</option>
+            <option value="下午">下午</option>
+            <option value="0740">07:40</option>
+            <option value="1200">12:00</option>
+            <option value="1340">13:40</option>
+            <option value="1700">17:00</option>
+            <option value="1930">19:30</option>
+            <option value="1850">18:50</option>
+          </select>
+        </div>
+
+        <!-- 備註（唯一可輸入文字的欄位） -->
+        <div class="mb-3">
+          <div class="text-[11px] font-semibold text-slate-400 mb-1.5">備註 <span class="font-normal text-slate-600">（選填，唯一可打字）</span></div>
+          <input id="quickNote" type="text" maxlength="80" placeholder="例如：調課說明、特殊情況…"
+            oninput="updateQuickSummary()"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-violet-400 text-slate-200">
+        </div>
+
+        <!-- 送出 + 摘要 -->
+        <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+          <div id="quickSummary" class="flex-1 text-xs text-slate-400 min-h-[1.25rem]">請完成上方選擇</div>
+          <button id="quickAddBtn" onclick="quickAddAttendance()" class="btn-primary w-full sm:w-auto px-6 py-3 rounded-2xl bg-violet-500 hover:bg-violet-400 text-white text-sm disabled:opacity-40">
+            <i class="fa-solid fa-plus mr-2"></i>確認加入
+          </button>
+        </div>
+        <div id="quickMembersHint" class="text-[11px] text-slate-600 mt-2"></div>
+      </div>
+
+      <!-- 今日任務摘要 -->
+      <div class="card rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-bold text-white">今日任務一覽</h2>
+            <p class="text-xs text-slate-500">從各時段自動解析餐勤、班消、研習假等</p>
+          </div>
+        </div>
+        <div id="todayDuties" class="space-y-2"></div>
+      </div>
+
+      <!-- 明日各時段（可逐段複製） -->
+      <div class="card rounded-3xl p-5 border border-emerald-500/20">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 class="font-bold text-white">明日各時段</h2>
+            <p class="text-xs text-slate-500">可一次複製整日，或逐時段複製貼到 LINE／通報群</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="openDaily(nextWorkdayKey())" class="px-3 py-2 rounded-xl border border-slate-700 text-sm hover:bg-slate-800">
+              <i class="fa-solid fa-bullhorn mr-1"></i>開明日通報
+            </button>
+            <button type="button" onclick="copyTomorrowSlotList()" class="px-3 py-2 rounded-xl border border-emerald-500/40 text-emerald-200 text-sm hover:bg-emerald-500/10">
+              <i class="fa-solid fa-list-ol mr-1"></i>複製時段清單
+            </button>
+            <button type="button" onclick="copyTomorrow()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
+              <i class="fa-regular fa-copy mr-1"></i>複製明日整日
+            </button>
+          </div>
+        </div>
+        <div id="tomorrowLabel" class="text-xs text-emerald-300/90 mb-3">—</div>
+        <div id="tomorrowSlots" class="space-y-2"></div>
+      </div>
+
+      <div class="grid lg:grid-cols-[1.5fr_1fr] gap-5">
+        <div class="card rounded-3xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-white">今日時段</h2>
+              <p class="text-xs text-slate-500">點一下進入該日通報</p>
             </div>
-
-            <div id="edit-day-panels" class="flex flex-col space-y-3 pt-2"></div>
-        </section>
-
-        <!-- TAB 3: 當日課表 -->
-        <section id="tab-daily-schedule" class="tab-content hidden space-y-4">
-            <div class="glass-panel p-4 rounded-xl flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <i class="fa-solid fa-book-open text-gh-gold text-xl"></i>
-                    <h2 class="text-base font-bold text-white">當日課程安排</h2>
-                </div>
-                <div class="flex bg-gh-bg border border-gh-border rounded-lg p-1">
-                    <button onclick="setScheduleDay('today')" id="btn-sched-today" class="px-3 py-1 text-xs rounded-md font-medium transition bg-gh-gold text-black font-semibold">今日</button>
-                    <button onclick="setScheduleDay('tomorrow')" id="btn-sched-tomorrow" class="px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition">明日</button>
-                </div>
+            <button onclick="openSchedule()" class="text-xs text-amber-300 hover:text-amber-200">看完整課表 →</button>
+          </div>
+          <div id="dashboardTimeline" class="space-y-2"></div>
+        </div>
+        <div class="card rounded-3xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="font-bold text-white">本週摘要</h2>
+              <p class="text-xs text-slate-500">後端即時統計</p>
             </div>
+          </div>
+          <div id="weeklySummary" class="space-y-3"></div>
+        </div>
+      </div>
 
-            <div id="daily-schedule-timeline" class="flex flex-col space-y-3"></div>
-        </section>
+      <div class="card rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-bold text-white">接下來工作日</h2>
+            <p class="text-xs text-slate-500">快速切換日期</p>
+          </div>
+        </div>
+        <div id="dayStrip" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2"></div>
+      </div>
+    </section>
 
-        <!-- TAB 4: 週課表總覽 -->
-        <section id="tab-weekly-schedule" class="tab-content hidden space-y-4">
-            <div class="glass-panel p-4 rounded-xl flex items-center justify-between">
-                <div>
-                    <h2 class="text-base font-bold text-white flex items-center gap-2">
-                        <i class="fa-solid fa-table-cells text-gh-accent"></i> 116 氣象組 完整週課表
-                    </h2>
-                </div>
-            </div>
+    <!-- Daily -->
+    <section id="view-daily" class="view hidden fade space-y-4">
+      <div class="card rounded-2xl p-4 sticky top-[60px] lg:top-[72px] z-30">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <div class="text-xs text-slate-400">差勤通報</div>
+            <h2 id="dailyTitle" class="text-xl font-black text-white">—</h2>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <div id="dailyDateChips" class="h-scroll max-w-full"></div>
+            <select id="dailyDate" onchange="renderDaily()" class="sr-only" aria-hidden="true"></select>
+            <button onclick="copyCurrentReport()" class="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm">
+              <i class="fa-regular fa-copy mr-1"></i>複製此日
+            </button>
+            <button onclick="copyTomorrow()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 font-semibold text-sm">
+              <i class="fa-regular fa-copy mr-1"></i>複製明日
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="leaveBar" class="card rounded-2xl p-4 flex items-center justify-between gap-3">
+        <div>
+          <div class="font-semibold text-white text-sm">18:50 外散假模式</div>
+          <div id="leaveText" class="text-xs text-slate-400 mt-0.5">—</div>
+        </div>
+        <label class="inline-flex items-center cursor-pointer">
+          <input id="leaveToggle" type="checkbox" class="sr-only" onchange="toggleLeave()">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+      <div id="dailyCards" class="space-y-3"></div>
+    </section>
 
-            <div class="glass-panel rounded-xl overflow-hidden border border-gh-border">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[650px]">
-                        <thead>
-                            <tr class="bg-gh-header text-xs text-gh-muted border-b border-gh-border">
-                                <th class="p-3 w-24 text-center border-r border-gh-border">節次 / 時間</th>
-                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期一</th>
-                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期二</th>
-                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期三</th>
-                                <th class="p-3 text-center border-r border-gh-border w-1/5">星期四</th>
-                                <th class="p-3 text-center w-1/5">星期五</th>
-                            </tr>
-                        </thead>
-                        <tbody id="weekly-timetable-body" class="divide-y divide-gh-border text-sm"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+    <!-- Schedule -->
+    <section id="view-schedule" class="view hidden fade space-y-4">
+      <div class="card rounded-2xl p-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div>
+            <div class="text-xs text-slate-400">課表</div>
+            <h2 class="text-xl font-black text-white">一週課表</h2>
+          </div>
+          <button onclick="showView('dashboard')" class="px-3 py-2 rounded-xl border border-slate-700 text-sm hover:bg-slate-800">回總覽</button>
+        </div>
+      </div>
+      <div class="card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[760px] text-sm">
+            <thead class="bg-slate-900/80">
+              <tr>
+                <th class="p-3 text-left">節次 / 時間</th>
+                <th class="p-3">一</th>
+                <th class="p-3">二</th>
+                <th class="p-3">三</th>
+                <th class="p-3">四</th>
+                <th class="p-3">五</th>
+              </tr>
+            </thead>
+            <tbody id="weekBody" class="divide-y divide-slate-800"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
-        <!-- TAB 5: 設定 -->
-        <section id="tab-settings" class="tab-content hidden space-y-4">
-            <div class="glass-panel p-6 rounded-xl space-y-4">
-                <div class="flex items-center gap-3 border-b border-gh-border pb-3">
-                    <i class="fa-solid fa-cloud-arrow-up text-gh-blue text-xl"></i>
-                    <div>
-                        <h2 class="text-base font-bold text-white">Google Apps Script (GAS) 雙向同步設定</h2>
-                        <p class="text-xs text-gh-muted">請填寫部署後的 Web App 網址以維護『差勤回報紀錄』。</p>
-                    </div>
-                </div>
+    <!-- Manage：全 chip 編輯，僅備註可打字 -->
+    <section id="view-manage" class="view hidden fade space-y-4">
+      <div class="card rounded-2xl p-4 lg:p-5">
+        <div class="flex flex-col gap-3">
+          <div>
+            <div class="text-xs text-slate-400">管理</div>
+            <h2 class="text-xl font-black text-white">差勤資料編輯</h2>
+            <p class="text-xs text-slate-500 mt-1">全程點選姓名／狀態／時段；只有「備註」可以打字。</p>
+          </div>
+          <div id="editDateChips" class="h-scroll"></div>
+          <select id="editDate" onchange="onEditDateChange()" class="sr-only" aria-hidden="true"></select>
+        </div>
+      </div>
+      <div id="editor" class="space-y-3"></div>
+      <div class="sticky bottom-4 z-30 flex flex-col sm:flex-row sm:items-center justify-end gap-2">
+        <label class="inline-flex items-center gap-2 text-xs text-slate-400 px-2">
+          <input type="checkbox" id="forceOverwrite" class="rounded border-slate-600">
+          強制覆寫
+        </label>
+        <button id="saveBtn" onclick="saveEditor()" class="btn-primary px-5 py-3 rounded-2xl bg-violet-500 hover:bg-violet-400 text-white font-black shadow-soft">
+          <i class="fa-solid fa-floppy-disk mr-2"></i>儲存此日
+        </button>
+      </div>
+      <div class="card rounded-2xl p-5">
+        <h3 class="font-bold mb-3">最近操作</h3>
+        <div id="audit" class="space-y-2 text-xs"></div>
+      </div>
+    </section>
+  </main>
+</div>
 
-                <div class="space-y-3">
-                    <label class="block text-xs font-semibold text-gh-text">GAS Web App 網址 (URL):</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="gas-url-input" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="flex-1 bg-gh-bg border border-gh-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gh-blue">
-                        <button onclick="saveGASUrl()" class="px-4 py-2 bg-gh-blue hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition">
-                            儲存設定
-                        </button>
-                    </div>
-                    <label class="block text-xs font-semibold text-gh-text">編輯密碼（須與 GAS 指令碼屬性 EDIT_KEY 相同）:</label>
-                    <input type="password" id="gas-key-input" autocomplete="off" class="w-full bg-gh-bg border border-gh-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gh-blue">
-                </div>
-            </div>
-        </section>
+<!-- Mobile bottom nav -->
+<nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-800 bg-[#0b1220]/95 backdrop-blur-xl lg:hidden" style="padding-bottom: var(--safe-bottom)">
+  <div class="grid grid-cols-4 max-w-lg mx-auto">
+    <button data-nav="dashboard" onclick="showView('dashboard')" class="navBtn mobile-nav-item py-2 text-[11px] text-slate-400">
+      <i class="fa-solid fa-gauge block text-lg mb-0.5"></i>總覽
+    </button>
+    <button data-nav="daily" onclick="showView('daily')" class="navBtn mobile-nav-item py-2 text-[11px] text-slate-400">
+      <i class="fa-solid fa-bullhorn block text-lg mb-0.5"></i>通報
+    </button>
+    <button data-nav="schedule" onclick="showView('schedule')" class="navBtn mobile-nav-item py-2 text-[11px] text-slate-400">
+      <i class="fa-solid fa-calendar-week block text-lg mb-0.5"></i>課表
+    </button>
+    <button data-nav="manage" onclick="showView('manage')" class="navBtn mobile-nav-item py-2 text-[11px] text-slate-400">
+      <i class="fa-solid fa-pen-to-square block text-lg mb-0.5"></i>管理
+    </button>
+  </div>
+</nav>
 
-    </main>
+<div id="toast" class="fixed top-20 right-4 z-[80] space-y-2 pointer-events-none max-w-sm"></div>
 
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+<!-- Settings modal -->
+<div id="settingsModal" class="hidden fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm p-4 items-center justify-center">
+  <div class="card rounded-3xl p-6 w-full max-w-xl">
+    <div class="flex justify-between items-start">
+      <div>
+        <h2 class="text-lg font-black">系統連線設定</h2>
+        <p class="text-xs text-slate-500 mt-1">網址沿用 GAS Web App；密鑰只存在本機瀏覽器。</p>
+      </div>
+      <button onclick="hideSettings()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="space-y-4 mt-5">
+      <label class="block">
+        <span class="text-xs font-semibold">GAS Web App URL</span>
+        <input id="gasUrl" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400" placeholder="https://script.google.com/macros/s/.../exec">
+      </label>
+      <label class="block">
+        <span class="text-xs font-semibold">存取密鑰</span>
+        <input id="gasKey" type="password" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-400" placeholder="對應後端 EDIT_KEY / VIEW_KEY">
+      </label>
+      <div class="flex justify-end gap-2">
+        <button onclick="hideSettings()" class="px-4 py-2 rounded-xl border border-slate-700 hover:bg-slate-800">取消</button>
+        <button onclick="saveSettings()" class="px-4 py-2 rounded-xl bg-blue-500 text-slate-950 font-bold">儲存並同步</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <script>
-        const WEEK = ['日','一','二','三','四','五','六'];
-        function todayKey() { return formatDateKey(new Date()); }
-        function keyToDate(k) { const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d, 12); }
-        function nextWorkdayKey(key, inclusive) {
-            const d = keyToDate(key);
-            if (!inclusive) d.setDate(d.getDate() + 1);
-            while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
-            return formatDateKey(d);
+<script>
+const WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+const DEFAULT_LEAVE_TYPES = [
+  '餐勤', '美工', '班消', '收尾', '花魚委', '巡水電', '校旗隊',
+  '研習假', '正課',
+  '榮譽假', '事假', '病假', '公假', '休假', '喪假',
+  '公差', '外出', '其他'
+];
+
+let appData = {
+  reports: [],
+  schedule: [],
+  serverDate: '',
+  members: [],
+  leaveTypes: DEFAULT_LEAVE_TYPES.slice(),
+  stats: {},
+  todayDuties: [],
+  role: 'guest'
+};
+let selectedDate = '';
+let leaveMap = JSON.parse(localStorage.getItem('leave_map_v9') || '{}');
+let isLoading = false;
+
+const $ = id => document.getElementById(id);
+
+function todayKey() {
+  return appData.serverDate || new Date().toISOString().slice(0, 10);
+}
+
+/** 下一個有資料的工作日（優先用後端回傳的日期欄；否則跳過週末） */
+function nextWorkdayKey() {
+  const dates = getDates();
+  const today = todayKey();
+  const after = dates.filter(k => k > today);
+  if (after.length) return after[0];
+  // fallback：從今天往後找平日
+  let d = dateObj(today);
+  for (let i = 0; i < 14; i++) {
+    d.setDate(d.getDate() + 1);
+    const w = d.getDay();
+    if (w >= 1 && w <= 5) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+  }
+  return today;
+}
+
+function copyTomorrow() {
+  const k = nextWorkdayKey();
+  if (!k) {
+    toast('找不到明日工作日資料', 'error');
+    return;
+  }
+  if (k === todayKey()) {
+    toast('目前沒有「下一個工作日」欄位，請先同步資料', 'error');
+    return;
+  }
+  const rows = activeRows(k);
+  if (!rows.length) {
+    toast(`明日（${fmt(k)}）尚無通報資料，可先到管理頁編輯或等後端產生欄位`, 'error');
+    return;
+  }
+  copyReport(k, `明日 ${fmt(k)}`);
+}
+
+/** 複製明日：以「時段清單」格式（適合貼 LINE） */
+function copyTomorrowSlotList() {
+  const k = nextWorkdayKey();
+  if (!k || k === todayKey()) {
+    toast('找不到明日工作日資料', 'error');
+    return;
+  }
+  const rows = activeRows(k);
+  if (!rows.length) {
+    toast(`明日（${fmt(k)}）尚無時段資料`, 'error');
+    return;
+  }
+  let out = `📋 明日各時段 ${fmt(k)}\n\n`;
+  rows.forEach((x, i) => {
+    out += `${i + 1}. 【${x.label}】\n${x.value || '無'}\n\n`;
+  });
+  copyText(out.trim(), `已複製明日 ${rows.length} 個時段`);
+}
+
+function dateObj(k) {
+  const [y, m, d] = k.split('-').map(Number);
+  return new Date(y, m - 1, d, 12);
+}
+
+function fmt(k) {
+  const d = dateObj(k);
+  return `${d.getMonth() + 1}/${d.getDate()}（週${WEEK[d.getDay()]}）`;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+}
+
+function getDates() {
+  if (!appData.reports?.length) return [];
+  return appData.reports[0].slice(1).filter(Boolean);
+}
+
+function colIndex(k) {
+  return getDates().indexOf(k) + 1;
+}
+
+function rowsForDate(k) {
+  const c = colIndex(k);
+  if (c < 1) return [];
+  return appData.reports.slice(1)
+    .map((r, i) => ({ i, label: r[0] || '', value: r[c] || '' }))
+    .filter(x => x.label);
+}
+
+function leaveEnabled(k) {
+  return leaveMap[k] !== false;
+}
+
+function setLeave(k, v) {
+  leaveMap[k] = v;
+  localStorage.setItem('leave_map_v9', JSON.stringify(leaveMap));
+}
+
+function activeRows(k) {
+  const has = leaveEnabled(k);
+  return rowsForDate(k).filter(x => {
+    const l = x.label;
+    if (l.trim() === '外散' && !has) return false;
+    if (l.includes('1850') || l.includes('18:50')) {
+      return has ? !l.includes('無外散') : !l.includes('有外散');
+    }
+    return true;
+  });
+}
+
+function setRoleBadge(role) {
+  const labels = { admin: '管理員', editor: '編輯者', viewer: '檢視者', guest: '訪客' };
+  const text = labels[role] || '訪客';
+  const cls = role === 'guest'
+    ? 'border-slate-700 text-slate-400'
+    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+  ['roleBadge', 'roleBadgeDesktop'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = text;
+    el.className = id === 'roleBadgeDesktop'
+      ? `text-xs px-3 py-2 rounded-xl border text-center ${cls}`
+      : `hidden sm:inline-flex px-2.5 py-1 rounded-full text-[11px] border ${cls}`;
+  });
+}
+
+function setSubtitle(msg) {
+  $('subTitle').textContent = msg;
+  $('subTitleMobile').textContent = msg;
+}
+
+async function loadData() {
+  if (isLoading) return;
+  isLoading = true;
+  const url = localStorage.getItem('gas_web_app_url') || '';
+  $('refreshBtn').classList.add('animate-spin');
+  setSubtitle(url ? '連線中…' : '尚未設定 GAS Web App');
+
+  try {
+    if (!url) throw new Error('尚未設定 GAS URL，請先到設定填寫');
+    const key = localStorage.getItem('gas_edit_key') || '';
+    const res = await fetch(url + '?key=' + encodeURIComponent(key) + '&t=' + Date.now(), {
+      cache: 'no-store'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || '後端錯誤');
+
+    appData = {
+      reports: j.reports || [],
+      schedule: j.schedule || [],
+      serverDate: j.serverDate || '',
+      serverTime: j.serverTime || '',
+      suggestedPeriod: j.suggestedPeriod || '',
+      members: j.members || j.personnel || [],
+      leaveTypes: (j.leaveTypes && j.leaveTypes.length) ? j.leaveTypes : DEFAULT_LEAVE_TYPES.slice(),
+      stats: j.stats || {},
+      todayDuties: j.todayDuties || [],
+      role: j.role || 'guest'
+    };
+
+    setRoleBadge(appData.role);
+    setSubtitle(`資料已同步 · ${appData.serverDate || '—'}${appData.serverTime ? ' ' + appData.serverTime : ''}`);
+    selectedDate = getDates()[0] || todayKey();
+    hydrateDateSelects();
+    renderLeaveTypes();
+    // 若尚未選時段，自動帶入後端建議
+    if (appData.suggestedPeriod && $('quickPeriod') && !$('quickPeriod').value) {
+      const opt = [...$('quickPeriod').options].some(o => o.value === appData.suggestedPeriod);
+      if (opt) $('quickPeriod').value = appData.suggestedPeriod;
+    }
+    // 同步後清掉編輯草稿，強制依最新資料重解析（避免人數殘留）
+    if (typeof editorDraft !== 'undefined') editorDraft = {};
+    if (typeof editorPick !== 'undefined') editorPick = {};
+    renderAll();
+    if (typeof renderPeriodChips === 'function') renderPeriodChips();
+    if (typeof updateQuickSummary === 'function') updateQuickSummary();
+  } catch (e) {
+    setSubtitle('同步失敗：' + e.message);
+    toast(e.message, 'error');
+  } finally {
+    isLoading = false;
+    $('refreshBtn').classList.remove('animate-spin');
+  }
+}
+
+function hydrateDateSelects() {
+  const dates = getDates();
+  ['dailyDate', 'editDate'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    const old = el.value;
+    el.innerHTML = dates.map(k => `<option value="${k}">${fmt(k)}</option>`).join('');
+    el.value = dates.includes(old) ? old : (dates.includes(selectedDate) ? selectedDate : dates[0] || '');
+  });
+  if (typeof renderEditDateChips === 'function') renderEditDateChips();
+  // 通報頁日期也改 chip（若容器存在）
+  const dailyBox = $('dailyDateChips');
+  if (dailyBox) {
+    const cur = $('dailyDate')?.value || '';
+    dailyBox.innerHTML = dates.map(k =>
+      `<button type="button" class="chip ${k === cur ? 'chip-on' : ''}" onclick="pickDailyDate('${k}')">${esc(fmt(k))}</button>`
+    ).join('');
+  }
+}
+function pickDailyDate(k) {
+  const sel = $('dailyDate');
+  if (sel) sel.value = k;
+  renderDaily();
+  hydrateDateSelects();
+}
+
+const PERIOD_CHIPS = [
+  { v: '全天', l: '全天' },
+  { v: '上午', l: '上午' },
+  { v: '下午', l: '下午' },
+  { v: '0740', l: '07:40' },
+  { v: '1200', l: '12:00' },
+  { v: '1340', l: '13:40' },
+  { v: '1700', l: '17:00' },
+  { v: '1930', l: '19:30' },
+  { v: '1850', l: '18:50' }
+];
+
+function renderLeaveTypes() {
+  const el = $('quickType');
+  const chips = $('quickTypeChips');
+  const types = appData.leaveTypes?.length ? appData.leaveTypes : DEFAULT_LEAVE_TYPES;
+  if (el) {
+    el.innerHTML = '<option value="">選擇狀態</option>' + types.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+  }
+  if (chips) {
+    const last = localStorage.getItem('quick_last_type') || '';
+    chips.innerHTML = types.map(t =>
+      `<button type="button" class="chip ${t === last ? 'chip-type-on' : ''}" data-type="${esc(t)}" onclick="pickQuickType('${esc(t)}')">${esc(t)}</button>`
+    ).join('');
+    if (last && el) el.value = last;
+  }
+  renderPeriodChips();
+  updateQuickSummary();
+}
+
+function renderPeriodChips() {
+  const box = $('quickPeriodChips');
+  const sel = $('quickPeriod');
+  if (!box) return;
+  const cur = sel?.value || localStorage.getItem('quick_last_period') || appData.suggestedPeriod || '';
+  if (sel && cur && !sel.value) sel.value = cur;
+  const active = sel?.value || cur;
+  box.innerHTML = PERIOD_CHIPS.map(p =>
+    `<button type="button" class="chip ${p.v === active ? 'chip-period-on' : ''}" onclick="pickQuickPeriod('${p.v}')">${p.l}</button>`
+  ).join('');
+}
+
+function setQuickDate(v) {
+  const sel = $('quickDate');
+  if (sel) sel.value = v;
+  document.querySelectorAll('#quickDateSeg button').forEach(b => {
+    b.classList.toggle('seg-on', b.dataset.date === v);
+  });
+  updateQuickSummary();
+}
+
+function pickQuickType(t) {
+  const el = $('quickType');
+  if (el) el.value = t;
+  document.querySelectorAll('#quickTypeChips .chip').forEach(b => {
+    b.classList.toggle('chip-type-on', b.dataset.type === t);
+  });
+  updateQuickSummary();
+}
+
+function pickQuickPeriod(v) {
+  const el = $('quickPeriod');
+  if (el) el.value = v;
+  renderPeriodChips();
+  updateQuickSummary();
+}
+
+function updateQuickSummary() {
+  const members = [...(quickSelectedMembers || [])];
+  const type = $('quickType')?.value || '';
+  const period = $('quickPeriod')?.value || '';
+  const note = ($('quickNote')?.value || '').trim();
+  const dateLabel = ($('quickDate')?.value === 'tomorrow') ? '明日' : '今日';
+  const sum = $('quickSummary');
+  const s1 = $('step1'), s2 = $('step2'), s3 = $('step3');
+  if (s1) s1.classList.toggle('on', members.length > 0);
+  if (s2) s2.classList.toggle('on', quickMode === 'remove' || !!type);
+  if (s3) s3.classList.toggle('on', !!period);
+  if (!sum) return;
+  if (!members.length && !type && !period) {
+    sum.textContent = '請點選人員、狀態、時段（僅備註可打字）';
+    return;
+  }
+  const parts = [dateLabel];
+  if (members.length) parts.push(members.join('、'));
+  if (quickMode === 'remove') parts.push('移除');
+  else if (type) parts.push(type);
+  if (period) parts.push(PERIOD_CHIPS.find(p => p.v === period)?.l || period);
+  if (note) parts.push('備註:' + note);
+  sum.innerHTML = `<span class="text-slate-300">${parts.map(esc).join(' · ')}</span>`;
+}
+
+function renderAll() {
+  renderDashboard();
+  renderDaily();
+  renderSchedule();
+  renderEditor();
+  renderAudit();
+  renderQuickMembers();
+}
+
+function showView(name) {
+  if (name === 'manage' && !['editor', 'admin'].includes(appData.role)) {
+    toast('目前密鑰沒有編輯權限', 'error');
+    return;
+  }
+  document.querySelectorAll('.view').forEach(x => x.classList.add('hidden'));
+  $('view-' + name).classList.remove('hidden');
+  document.querySelectorAll('.navBtn').forEach(x => {
+    x.classList.toggle('nav-active', x.dataset.nav === name);
+  });
+}
+
+function openDaily(k) {
+  selectedDate = k;
+  hydrateDateSelects();
+  $('dailyDate').value = k;
+  showView('daily');
+  renderDaily();
+}
+
+function openSchedule() {
+  showView('schedule');
+}
+
+function renderDashboard() {
+  const s = appData.stats?.today || {};
+  $('todayLabel').textContent = `${todayKey()} · 週${WEEK[dateObj(todayKey()).getDay()]}`;
+  $('statTotal').textContent = s.total ?? '—';
+  $('statActual').textContent = s.actual ?? '—';
+  $('statAbsent').textContent = s.absent ?? '—';
+  $('statChanges').textContent = appData.stats?.thisWeek?.changeCount ?? 0;
+
+  const rows = activeRows(todayKey()).filter(x =>
+    /^(\d{1,2}:?\d{2}|18|19)/.test(x.label) || x.label.includes('1850')
+  );
+  const sug = appData.suggestedPeriod || '';
+  $('dashboardTimeline').innerHTML = rows.length
+    ? rows.map(x => {
+      const sk = guessSlotKey(x.label);
+      const isNow = sug && (sk === sug || (sug === '1850' && sk.startsWith('1850')));
+      return `
+      <button onclick="openDaily('${todayKey()}')" class="w-full text-left p-3 rounded-xl border transition ${isNow ? 'bg-blue-500/10 border-blue-400/40 ring-1 ring-blue-400/30' : 'bg-slate-900/70 hover:bg-slate-800 border-slate-800'}">
+        <div class="flex items-start gap-3">
+          <span class="text-xs font-bold ${isNow ? 'text-blue-200' : 'text-blue-300'} w-20 shrink-0">${esc(x.label).replace(/\s*\\n.*$/, '')}${isNow ? ' ·現在' : ''}</span>
+          <span class="text-xs text-slate-300 whitespace-pre-line line-clamp-2">${esc(x.value || '無')}</span>
+        </div>
+      </button>`;
+    }).join('')
+    : `<div class="text-sm text-slate-500 p-4 text-center">今天尚無資料。</div>`;
+
+  const types = appData.stats?.byLeaveType || [];
+  const leaveCount = appData.stats?.thisWeek?.leaveCount || 0;
+  const changeCount = appData.stats?.thisWeek?.changeCount || 0;
+  $('weeklySummary').innerHTML = `
+    <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800 flex justify-between">
+      <span>本週請假 / 缺勤</span><b class="text-amber-300">${leaveCount}</b>
+    </div>
+    <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800 flex justify-between">
+      <span>本週調課</span><b class="text-violet-300">${changeCount}</b>
+    </div>
+    <div class="pt-2 text-xs text-slate-500">主要假別</div>
+    ${types.slice(0, 5).map(x => `
+      <div class="flex justify-between text-sm">
+        <span>${esc(x.name)}</span>
+        <span class="text-slate-300">${x.count}</span>
+      </div>`).join('') || '<div class="text-sm text-slate-500">尚無統計</div>'}`;
+
+  const dates = getDates().slice(0, 5);
+  const nextK = nextWorkdayKey();
+  $('dayStrip').innerHTML = dates.map((k, i) => {
+    const isToday = k === todayKey();
+    const isTomorrow = k === nextK && k !== todayKey();
+    const label = isToday ? '今天' : (isTomorrow ? '明日' : '工作日 ' + (i + 1));
+    const border = isToday
+      ? 'border-blue-400/40 bg-blue-500/10'
+      : (isTomorrow ? 'border-emerald-400/40 bg-emerald-500/10' : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800');
+    const copyBtn = isTomorrow
+      ? `<button type="button" onclick="event.stopPropagation();copyTomorrow()" class="mt-2 text-[11px] text-emerald-300 hover:text-emerald-200 font-semibold"><i class="fa-regular fa-copy mr-1"></i>複製明日</button>`
+      : (isToday
+        ? `<button type="button" onclick="event.stopPropagation();copyReport('${k}', '今日 ${fmt(k)}')" class="mt-2 text-[11px] text-blue-300 hover:text-blue-200 font-semibold"><i class="fa-regular fa-copy mr-1"></i>複製今日</button>`
+        : `<button type="button" onclick="event.stopPropagation();copyReport('${k}', '${fmt(k)}')" class="mt-2 text-[11px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy mr-1"></i>複製</button>`);
+    return `<div class="text-left p-3 rounded-xl border transition ${border}">
+      <button type="button" onclick="openDaily('${k}')" class="w-full text-left">
+        <div class="text-[11px] text-slate-500">${label}</div>
+        <div class="font-bold mt-1">${fmt(k)}</div>
+      </button>
+      ${copyBtn}
+    </div>`;
+  }).join('') || '<div class="text-sm text-slate-500 col-span-full text-center py-4">尚無日期欄位</div>';
+  renderTodayDuties();
+  renderTomorrowSlots();
+}
+
+function dutyChipClass(type) {
+  const t = String(type || '');
+  if (/餐勤/.test(t)) return 'bg-amber-500/15 text-amber-200 border-amber-500/30';
+  if (/美工/.test(t)) return 'bg-pink-500/15 text-pink-200 border-pink-500/30';
+  if (/班消|收尾/.test(t)) return 'bg-sky-500/15 text-sky-200 border-sky-500/30';
+  if (/研習假|正課/.test(t)) return 'bg-rose-500/15 text-rose-200 border-rose-500/30';
+  if (/花魚委|巡水電|校旗隊/.test(t)) return 'bg-violet-500/15 text-violet-200 border-violet-500/30';
+  return 'bg-slate-700/50 text-slate-300 border-slate-600';
+}
+
+function renderTodayDuties() {
+  const el = $('todayDuties');
+  if (!el) return;
+  const duties = appData.todayDuties || [];
+  const canEdit = ['editor', 'admin'].includes(appData.role);
+  const rows = duties.filter(d => (d.items && d.items.length) || d.absent > 0);
+  if (!rows.length) {
+    el.innerHTML = '<div class="text-sm text-slate-500 text-center py-4">今日尚無任務／缺勤明細（或尚未同步）。</div>';
+    return;
+  }
+  el.innerHTML = rows.map(d => {
+    const slotKey = guessSlotKey(d.slot);
+    const chips = (d.items || []).map(it => {
+      if (it.leaveType) {
+        const names = it.names || [];
+        if (names.length) {
+          return names.map(nm => {
+            const rm = canEdit
+              ? `onclick="removeDutyChip('${esc(nm)}','${esc(slotKey)}')" title="點一下移除 ${esc(nm)}"`
+              : '';
+            return `<button type="button" ${rm} class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] ${dutyChipClass(it.leaveType)} ${canEdit ? 'hover:border-rose-400/60 hover:bg-rose-500/10 cursor-pointer' : ''}"><b>${esc(it.leaveType)}</b> · ${esc(nm)}${canEdit ? ' <i class="fa-solid fa-xmark text-[10px] opacity-60"></i>' : ''}</button>`;
+          }).join(' ');
         }
-        // 「今日/明日」= 今天(或下一個上班日) / 再下一個上班日，週末不會找不到欄位
-        function reportDateKey(mode) {
-            const t = nextWorkdayKey(todayKey(), true);
-            return mode === 'tomorrow' ? nextWorkdayKey(t, false) : t;
+        const label = it.count ? it.count + '員' : '';
+        return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border text-[11px] ${dutyChipClass(it.leaveType)}"><b>${esc(it.leaveType)}</b>${label ? ' · ' + esc(label) : ''}</span>`;
+      }
+      return `<span class="inline-flex px-2 py-0.5 rounded-lg border text-[11px] bg-slate-800 text-slate-400 border-slate-700">${esc(it.raw)}</span>`;
+    }).join(' ');
+    return `<div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="text-xs font-bold text-blue-300">${esc(d.slot)}</span>
+        <span class="text-[11px] text-slate-500">實到 ${d.actual ?? '—'}/${d.total ?? '—'}</span>
+      </div>
+      <div class="flex flex-wrap gap-1.5">${chips || '<span class="text-xs text-slate-500">無明細</span>'}</div>
+      ${canEdit ? '<div class="text-[10px] text-slate-600 mt-2">點姓名 chip 可直接移除該人此時段</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function guessSlotKey(label) {
+  const s = String(label || '').replace(/\s+/g, '');
+  if (/1850|18:50/.test(s)) return s.includes('無') ? '1850_no' : '1850';
+  if (/07:?40|0740/.test(s)) return '0740';
+  if (/12:?00|1200/.test(s)) return '1200';
+  if (/13:?40|1340/.test(s)) return '1340';
+  if (/17:?00|1700/.test(s)) return '1700';
+  if (/19:?30|1930/.test(s)) return '1930';
+  return s || '全天';
+}
+
+async function removeDutyChip(member, period) {
+  if (!['editor', 'admin'].includes(appData.role)) {
+    toast('沒有編輯權限', 'error');
+    return;
+  }
+  if (!confirm(`確定從「${period}」移除 ${member}？`)) return;
+  const url = localStorage.getItem('gas_web_app_url') || '';
+  const key = localStorage.getItem('gas_edit_key') || '';
+  if (!url || !key) { showSettings(); return; }
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'quickAttendance',
+        mode: 'remove',
+        key,
+        dateKey: todayKey(),
+        member,
+        period: period === '1850_no' ? '1850' : period,
+        type: ''
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '移除失敗');
+    toast(`已移除 ${member}`);
+    await loadData();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function copyPrevToToday() {
+  if (!['editor', 'admin'].includes(appData.role)) {
+    toast('沒有編輯權限', 'error');
+    return;
+  }
+  if (!confirm('確定將「前一工作日」內容複製到今日各時段？（會覆寫今日現有內容）')) return;
+  const url = localStorage.getItem('gas_web_app_url') || '';
+  const key = localStorage.getItem('gas_edit_key') || '';
+  if (!url || !key) { showSettings(); return; }
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'copyPreviousWorkday',
+        key,
+        dateKey: todayKey(),
+        period: '全天'
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '複製失敗');
+    toast('已複製前一工作日 → 今日');
+    await loadData();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function resetEditorSlot(slotLabel) {
+  if (!['editor', 'admin'].includes(appData.role)) {
+    toast('沒有編輯權限', 'error');
+    return;
+  }
+  const k = $('editDate').value;
+  if (!k || !slotLabel) return;
+  if (!confirm(`還原「${slotLabel}」為週範本內容？`)) return;
+  const url = localStorage.getItem('gas_web_app_url') || '';
+  const key = localStorage.getItem('gas_edit_key') || '';
+  if (!url || !key) { showSettings(); return; }
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'resetSlotToTemplate',
+        key,
+        dateKey: k,
+        slot: slotLabel
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '還原失敗');
+    toast(`已還原 ${slotLabel}`);
+    await loadData();
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+
+
+function renderTomorrowSlots() {
+  const listEl = $('tomorrowSlots');
+  const labelEl = $('tomorrowLabel');
+  if (!listEl || !labelEl) return;
+
+  const k = nextWorkdayKey();
+  const today = todayKey();
+  if (!k || k === today) {
+    labelEl.textContent = '尚無下一個工作日欄位，請先同步或由後端產生日期欄。';
+    listEl.innerHTML = '<div class="text-sm text-slate-500 text-center py-4">無法顯示明日時段。</div>';
+    return;
+  }
+
+  labelEl.innerHTML = `<span class="font-semibold text-emerald-300">${esc(fmt(k))}</span> · 點右側按鈕可複製單一時段內容`;
+
+  const rows = activeRows(k);
+  if (!rows.length) {
+    listEl.innerHTML = `<div class="text-sm text-slate-500 text-center py-4">
+      ${esc(fmt(k))} 尚無時段資料。<br>
+      <button type="button" onclick="openDaily('${k}')" class="mt-2 text-emerald-300 hover:text-emerald-200 text-xs">到通報頁查看 / 管理頁編輯 →</button>
+    </div>`;
+    return;
+  }
+
+  listEl.innerHTML = rows.map((x, idx) => {
+    const preview = (x.value || '無').trim();
+    const short = preview.length > 120 ? preview.slice(0, 120) + '…' : preview;
+    return `<div class="flex flex-col sm:flex-row sm:items-stretch gap-2 p-3 rounded-xl bg-slate-900/70 border border-slate-800">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="px-2 py-0.5 rounded-lg bg-emerald-500/10 border border-emerald-400/25 text-emerald-300 text-xs font-bold">${esc(x.label)}</span>
+        </div>
+        <div class="text-xs text-slate-300 whitespace-pre-line leading-5 line-clamp-3">${esc(short)}</div>
+      </div>
+      <div class="flex sm:flex-col gap-2 shrink-0 sm:justify-center">
+        <button type="button"
+          onclick="copySlotByDate('${k}','${encodeURIComponent(x.label)}','${encodeURIComponent(x.value || '')}')"
+          class="px-3 py-2 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold whitespace-nowrap">
+          <i class="fa-regular fa-copy mr-1"></i>複製此時段
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function copySlotByDate(dateKey, labelEnc, valueEnc) {
+  const label = decodeURIComponent(labelEnc);
+  const value = decodeURIComponent(valueEnc);
+  const head = `【${fmt(dateKey)} · ${label}】`;
+  copyText(`${head}\n${value || '無'}`);
+}
+
+function renderDaily() {
+  const k = $('dailyDate').value || selectedDate || todayKey();
+  selectedDate = k;
+  const isTmr = k === nextWorkdayKey() && k !== todayKey();
+  $('dailyTitle').textContent = (isTmr ? '明日 · ' : '') + fmt(k);
+  $('leaveToggle').checked = leaveEnabled(k);
+  $('leaveText').textContent = leaveEnabled(k)
+    ? '顯示 18:50 有外散假版本'
+    : '顯示 18:50 無外散假版本';
+
+  const rows = activeRows(k);
+  $('dailyCards').innerHTML = rows.length
+    ? rows.map(x => {
+      const kind = typeof slotKind === 'function' ? slotKind(x.label) : 'regular';
+      const kindBadge =
+        kind === 'study' ? '<span class="text-[10px] text-sky-300">自習課格式</span>' :
+        kind === 'costume' ? '<span class="text-[10px] text-pink-300">服裝報備格式</span>' :
+        kind === 'waisan' ? '<span class="text-[10px] text-violet-300">外散·資格／意願</span>' :
+        (x.label.includes('1850') || x.label.includes('18:50')) ? '<span class="text-[10px] text-violet-300">18:50 外散假</span>' : '';
+      const border =
+        kind === 'study' ? 'border-sky-500/20' :
+        kind === 'costume' ? 'border-pink-500/20' :
+        kind === 'waisan' ? 'border-violet-500/25' : '';
+      return `
+      <article class="card rounded-2xl p-4 ${border}">
+        <div class="flex justify-between gap-3 items-center mb-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-2 py-1 rounded-lg bg-blue-500/10 border border-blue-400/20 text-blue-300 text-xs font-bold">${esc(x.label)}</span>
+            ${kindBadge}
+          </div>
+          <button onclick="copySlotByDate('${k}','${encodeURIComponent(x.label)}','${encodeURIComponent(x.value || '')}')" class="text-xs text-slate-400 hover:text-white shrink-0">
+            <i class="fa-regular fa-copy mr-1"></i>複製此時段
+          </button>
+        </div>
+        <div class="text-sm text-slate-200 whitespace-pre-line leading-6 bg-slate-950/50 rounded-xl p-3">${esc(x.value || '無')}</div>
+      </article>`;
+    }).join('')
+    : '<div class="card rounded-2xl p-8 text-center text-slate-500">找不到這個日期的資料。</div>';
+}
+
+function toggleLeave() {
+  const k = $('dailyDate').value;
+  setLeave(k, $('leaveToggle').checked);
+  renderDaily();
+  renderDashboard();
+}
+
+function copySingle(a, b) {
+  copyText(`▶ 時段：${decodeURIComponent(a)}\n${decodeURIComponent(b)}`);
+}
+
+function copyReport(k, label) {
+  const rows = activeRows(k);
+  if (!rows.length) {
+    toast(`${label || fmt(k)} 尚無資料可複製`, 'error');
+    return;
+  }
+  let out = `=== 116氣象組 每日通報 (${k}) ===\n\n`;
+  rows.forEach(x => {
+    out += `【${x.label}】\n${x.value || '無'}\n--------------------\n`;
+  });
+  copyText(out, label ? `已複製：${label}` : `已複製：${fmt(k)}`);
+}
+
+function copyCurrentReport() {
+  copyReport($('dailyDate').value || selectedDate);
+}
+
+function copyText(t, okMsg) {
+  const msg = okMsg || '已複製到剪貼簿';
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(t).then(() => toast(msg)).catch(fallback);
+  } else {
+    fallback();
+  }
+  function fallback() {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      toast(msg);
+    } catch {
+      toast('複製失敗，請手動選取', 'error');
+    }
+    ta.remove();
+  }
+}
+
+function renderSchedule() {
+  const sch = appData.schedule || [];
+  $('weekBody').innerHTML = sch.slice(1).filter(r => r[0] != null).map(r => `
+    <tr class="hover:bg-slate-900/70">
+      <td class="p-3 font-bold text-white">
+        ${esc(r[0])}
+        <div class="text-[10px] text-slate-500 font-normal">${esc(r[1] || '')}</div>
+      </td>
+      ${[2, 3, 4, 5, 6].map(i =>
+        `<td class="p-3 text-center text-xs whitespace-pre-line text-slate-300">${esc(r[i] || '—')}</td>`
+      ).join('')}
+    </tr>`).join('') || '<tr><td colspan="6" class="p-8 text-center text-slate-500">尚無課表資料</td></tr>';
+}
+
+/** ========== 全點選編輯：解析／組裝儲存格（對齊後端格式） ========== */
+let editorDraft = {}; // slotLabel -> { prefix, total, details[], original }
+let editorPick = {};  // slotLabel -> { members:Set, type, note }
+
+const NUM_CH = ['零','一','二','三','四','五','六','七','八','九','十'];
+function numToChClient(n) {
+  n = +n;
+  if (n <= 10) return NUM_CH[n] || String(n);
+  if (n < 20) return '十' + (NUM_CH[n - 10] || '');
+  return String(n);
+}
+function chToNumClient(s) {
+  if (/^\d+$/.test(s)) return +s;
+  const d = { 一:1,二:2,兩:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9 };
+  if (s === '十') return 10;
+  if (s.charAt(0) === '十') return 10 + (d[s.charAt(1)] || 0);
+  if (s.length === 2 && s.charAt(1) === '十') return (d[s.charAt(0)] || 0) * 10;
+  if (s.length === 3 && s.charAt(1) === '十') return (d[s.charAt(0)] || 0) * 10 + (d[s.charAt(2)] || 0);
+  return d[s] || 0;
+}
+function parseCellClient(text) {
+  const prefix = [], details = [];
+  let total = null, seen = false;
+  String(text || '').split(/\r?\n/).forEach(raw => {
+    const l = raw.trim();
+    if (!l) return;
+    const mt = l.match(/^應到\s*[:：]?\s*(\d+)\s*員$/);
+    if (mt) { total = +mt[1]; seen = true; return; }
+    if (/^實到\s*[:：]?\s*\d+\s*員$/.test(l)) return;
+    (seen ? details : prefix).push(l);
+  });
+  if (!prefix.length) prefix.push('116氣象組');
+  return { prefix, total: total == null ? 7 : total, details };
+}
+function countAbsentClient(line) {
+  let m = String(line || '').trim().match(/^([一二兩三四五六七八九十\d]+)員/);
+  if (m) return chToNumClient(m[1]);
+  m = String(line || '').trim().match(/^(.+?)([一二兩三四五六七八九十\d]+)員$/);
+  if (m) return chToNumClient(m[2]);
+  return 0;
+}
+function buildCellClient(p) {
+  let absent = 0;
+  (p.details || []).forEach(l => { absent += countAbsentClient(l); });
+  const actual = Math.max(0, p.total - absent);
+  return {
+    text: [...p.prefix, '應到' + p.total + '員', ...p.details, '實到' + actual + '員'].join('\n'),
+    actual, total: p.total
+  };
+}
+function parseDetailClient(line) {
+  const text = String(line || '').trim();
+  let m = text.match(/^([一二兩三四五六七八九十\d]+)員([^（(]+)[（(]([^）)]+)[）)]$/);
+  if (m) return { kind: 'leave', count: chToNumClient(m[1]), leaveType: m[2].trim(), names: m[3].split(/[、,，;；\s]+/).filter(Boolean), raw: text };
+  m = text.match(/^([一二兩三四五六七八九十\d]+)員(.+)$/);
+  if (m) return { kind: 'leave', count: chToNumClient(m[1]), leaveType: m[2].trim(), names: [], raw: text };
+  m = text.match(/^(.+?)([一二兩三四五六七八九十\d]+)員$/);
+  if (m) return { kind: 'leave', count: chToNumClient(m[2]), leaveType: m[1].trim(), names: [], raw: text };
+  m = text.match(/^調課[（(]([^）)]+)[）)]$/);
+  if (m) return { kind: 'change', note: m[1], raw: text };
+  return { kind: 'other', raw: text };
+}
+function buildLeaveLineClient(names, type) {
+  const list = Array.isArray(names) ? names.filter(Boolean) : [names].filter(Boolean);
+  if (!list.length) return '';
+  return numToChClient(list.length) + '員' + type + '（' + list.join('、') + '）';
+}
+
+function onEditDateChange() {
+  editorDraft = {};
+  editorPick = {};
+  renderEditDateChips();
+  renderEditor();
+}
+
+function renderEditDateChips() {
+  const box = $('editDateChips');
+  const sel = $('editDate');
+  if (!box || !sel) return;
+  const dates = getDates();
+  const cur = sel.value || dates[0] || '';
+  box.innerHTML = dates.map(k =>
+    `<button type="button" class="chip ${k === cur ? 'chip-on' : ''}" onclick="pickEditDate('${k}')">${esc(fmt(k))}</button>`
+  ).join('') || '<span class="text-xs text-slate-500">尚無日期</span>';
+}
+
+function pickEditDate(k) {
+  const sel = $('editDate');
+  if (sel) sel.value = k;
+  onEditDateChange();
+}
+
+/** 時段類型：一般點名 / 自習課 / 特殊服裝 / 外散 */
+function slotKind(label) {
+  const s = String(label || '').replace(/\s+/g, '');
+  if (s === '自習課' || s.includes('自習')) return 'study';
+  if (s === '特殊服裝' || s.includes('特殊服裝')) return 'costume';
+  if (s === '外散' || s.includes('外散') && !s.includes('1850') && !s.includes('18:50')) return 'waisan';
+  return 'regular';
+}
+
+/** 清理外散姓名：去重、去掉標籤殘渣、只留合理姓名 */
+function cleanWaisanNames(list, roster) {
+  const junk = /^(符合|不符合|有意願|無意願|資格|者|員|應到|實到|116|氣象組|無)$/;
+  const out = [];
+  const seen = new Set();
+  (list || []).forEach(raw => {
+    let n = String(raw || '').replace(/[（）()：:\d]/g, '').trim();
+    if (!n || junk.test(n) || n.length > 8 || n.length < 2) return;
+    // 過長片段再拆
+    if (/[、,，]/.test(n)) {
+      n.split(/[、,，]/).forEach(part => {
+        const p = part.trim();
+        if (p && !junk.test(p) && p.length >= 2 && p.length <= 8 && !seen.has(p)) {
+          seen.add(p); out.push(p);
         }
-        // 外散假開關：依日期分別記憶
-        function getLeave(k) { try { return JSON.parse(localStorage.getItem('leave_map') || '{}')[k] !== false; } catch (e) { return true; } }
-        function setLeave(k, v) { try { const m = JSON.parse(localStorage.getItem('leave_map') || '{}'); m[k] = v; localStorage.setItem('leave_map', JSON.stringify(m)); } catch (e) {} }
-        function syncLeaveUI() {
-            document.getElementById('leave-toggle').checked = hasLeaveOption;
-            const t = document.getElementById('leave-status-text');
-            t.innerText = hasLeaveOption ? '開啟 (含外散)' : '關閉 (無外散)';
-            t.className = hasLeaveOption ? 'text-xs font-mono text-gh-purple font-bold' : 'text-xs font-mono text-gh-muted font-bold';
+      });
+      return;
+    }
+    if (seen.has(n)) return;
+    seen.add(n);
+    out.push(n);
+  });
+  // 若有人員名單，優先只保留名單內（避免解析雜訊）；若完全對不到則保留解析結果
+  if (roster && roster.length) {
+    const inRoster = out.filter(n => roster.indexOf(n) >= 0);
+    if (inRoster.length) return inRoster;
+  }
+  return out;
+}
+
+function parseWaisanClient(text, roster) {
+  const raw = String(text || '').replace(/\r\n/g, '\n');
+  const groups = {
+    eligible: [], ineligible: [], willing: [], unwilling: [],
+    details: [], total: null, prefix: '116氣象組'
+  };
+  const keyMap = {
+    '符合資格者': 'eligible',
+    '不符合資格者': 'ineligible',
+    '有意願者': 'willing',
+    '無意願者': 'unwilling'
+  };
+  // 以標籤切段：每段到下一個標籤或應到/實到為止（支援括號跨行）
+  const labels = Object.keys(keyMap);
+  labels.forEach(label => {
+    const re = new RegExp(
+      label + '\\s*[:：]?\\s*(?:(\\d+)\\s*員)?\\s*([\\s\\S]*?)(?=(?:符合資格者|不符合資格者|有意願者|無意願者|應到|實到)|$)',
+      'm'
+    );
+    const m = raw.match(re);
+    if (!m) return;
+    const chunk = m[2] || '';
+    const names = [];
+    // 括號內姓名（可跨行）
+    const parenRe = /[（(]([^）)]*)[）)]/g;
+    let pm;
+    while ((pm = parenRe.exec(chunk)) !== null) {
+      pm[1].split(/[、,，;；\s\n]+/).forEach(x => names.push(x));
+    }
+    // 無括號時，嘗試用頓號分隔的中文名
+    if (!names.length) {
+      chunk.split(/[、,，;；\n]+/).forEach(x => names.push(x));
+    }
+    groups[keyMap[label]] = cleanWaisanNames(names, roster);
+  });
+  // 應到
+  const mt = raw.match(/應到\s*[:：]?\s*(\d+)\s*員/);
+  if (mt) groups.total = +mt[1];
+  // 任務明細行
+  raw.split(/\n/).forEach(line => {
+    const l = line.trim();
+    if (!l) return;
+    if (/^(116|符合|不符合|有意願|無意願|應到|實到)/.test(l)) return;
+    if (/員/.test(l) && (l.includes('（') || l.includes('(') || /員$/.test(l))) {
+      // 避免把「符合資格者：10員」殘段當任務
+      if (/資格|意願/.test(l)) return;
+      groups.details.push(l);
+    }
+  });
+  // 外散應到 = 符合資格人數
+  groups.total = groups.eligible.length;
+  return groups;
+}
+
+function buildWaisanClient(g) {
+  const uniq = (arr) => {
+    const s = new Set();
+    const out = [];
+    (arr || []).forEach(n => {
+      if (n && !s.has(n)) { s.add(n); out.push(n); }
+    });
+    return out;
+  };
+  const eligible = uniq(g.eligible);
+  const ineligible = uniq(g.ineligible);
+  const willing = uniq(g.willing);
+  const unwilling = uniq(g.unwilling);
+  const fmt = (label, names) => {
+    const n = names.length;
+    const body = names.length ? names.join('、') : '';
+    return `${label}：${n}員${body ? '（' + body + '）' : ''}`;
+  };
+  // 應到固定 = 符合資格人數
+  const total = eligible.length;
+  if (g) g.total = total;
+  const lines = [
+    g.prefix || '116氣象組',
+    fmt('符合資格者', eligible),
+    fmt('不符合資格者', ineligible),
+    fmt('有意願者', willing),
+    fmt('無意願者', unwilling),
+    `應到：${total}員`
+  ];
+  (g.details || []).forEach(d => lines.push(d));
+  let absent = 0;
+  (g.details || []).forEach(l => { absent += countAbsentClient(l); });
+  const actual = Math.max(0, total - absent);
+  lines.push(`實到：${actual}員`);
+  return { text: lines.join('\n'), actual, total, eligible, ineligible, willing, unwilling };
+}
+
+function ensureEditorSlot(slot, value) {
+  if (!editorDraft[slot]) {
+    const kind = slotKind(slot);
+    if (kind === 'waisan') {
+      const roster = (appData.members || []).map(x => typeof x === 'string' ? x : (x.name || '')).filter(Boolean);
+      const g = parseWaisanClient(value, roster);
+      const draft = {
+        kind: 'waisan',
+        prefix: g.prefix,
+        total: g.total,
+        eligible: cleanWaisanNames(g.eligible, roster),
+        ineligible: cleanWaisanNames(g.ineligible, roster),
+        willing: cleanWaisanNames(g.willing, roster),
+        unwilling: cleanWaisanNames(g.unwilling, roster),
+        details: g.details.slice(),
+        original: value || ''
+      };
+      // 載入時靜默套用互斥 + 去重
+      waisanEnsureLists(draft);
+      draft.ineligible.forEach(n => {
+        waisanRemoveFrom(draft.eligible, n);
+        waisanRemoveFrom(draft.willing, n);
+        waisanRemoveFrom(draft.unwilling, n);
+      });
+      draft.willing = draft.willing.filter(n => draft.eligible.indexOf(n) >= 0);
+      draft.unwilling = draft.unwilling.filter(n => draft.eligible.indexOf(n) >= 0);
+      draft.willing.forEach(n => waisanRemoveFrom(draft.unwilling, n));
+      // 應到一律 = 符合資格人數
+      draft.total = draft.eligible.length;
+      editorDraft[slot] = draft;
+    } else if (kind === 'study') {
+      const parsed = parseStudyText(value);
+      editorDraft[slot] = {
+        kind: 'study',
+        empty: parsed.empty,
+        periods: parsed.periods.slice(),
+        location: parsed.location,
+        count: parsed.count,
+        original: value || ''
+      };
+    } else if (kind === 'costume') {
+      editorDraft[slot] = {
+        kind: 'costume',
+        text: String(value || '').trim() || '🈚',
+        original: value || ''
+      };
+    } else {
+      const p = parseCellClient(value);
+      editorDraft[slot] = {
+        kind: 'regular',
+        prefix: p.prefix.slice(),
+        total: p.total,
+        details: p.details.slice(),
+        original: value || ''
+      };
+    }
+  }
+  if (!editorPick[slot]) editorPick[slot] = { members: new Set(), type: '', note: '', waisanGroup: 'eligible' };
+  return editorDraft[slot];
+}
+
+function draftToContent(st) {
+  if (!st) return '';
+  if (st.kind === 'waisan') return buildWaisanClient(st).text;
+  if (st.kind === 'study') return buildStudyText(st);
+  if (st.kind === 'costume') return st.text || '🈚';
+  return buildCellClient(st).text;
+}
+
+/** 自習課：節次 1–8、地點選項 */
+const STUDY_PERIODS = [1, 2, 3, 4, 5, 6, 7, 8];
+const STUDY_LOCATIONS = ['氣象館J204', '圖書館', '讀書樓B239'];
+
+function formatPeriodRanges(periods) {
+  const nums = [...new Set((periods || []).map(Number).filter(n => n >= 1 && n <= 8))].sort((a, b) => a - b);
+  if (!nums.length) return '';
+  const parts = [];
+  let start = nums[0], prev = nums[0];
+  for (let i = 1; i <= nums.length; i++) {
+    const n = nums[i];
+    if (n === prev + 1) {
+      prev = n;
+      continue;
+    }
+    parts.push(start === prev ? String(start) : start + '-' + prev);
+    start = prev = n;
+  }
+  return '第' + parts.join('、') + '節';
+}
+
+function parseStudyText(text) {
+  const t = String(text || '').trim();
+  if (!t || t === '🈚' || t === '無') {
+    return { empty: true, periods: [], location: STUDY_LOCATIONS[0], count: 7 };
+  }
+  const periods = [];
+  // 第1-2、5-7節 / 第1節 / 第7、8節
+  const rangeRe = /(\d+)\s*[-~～到至]\s*(\d+)/g;
+  let m;
+  const consumed = new Set();
+  while ((m = rangeRe.exec(t)) !== null) {
+    const a = +m[1], b = +m[2];
+    for (let i = Math.min(a, b); i <= Math.max(a, b); i++) {
+      if (i >= 1 && i <= 8) { periods.push(i); consumed.add(i); }
+    }
+  }
+  // 單獨數字節
+  const singleRe = /第?\s*([1-8])\s*節/g;
+  while ((m = singleRe.exec(t)) !== null) {
+    const n = +m[1];
+    if (!consumed.has(n)) periods.push(n);
+  }
+  // 也抓「、5、6」這類殘段
+  const loose = t.match(/[第、,，\s]([1-8])(?=[節、,，\s-]|$)/g);
+  if (loose) {
+    loose.forEach(s => {
+      const n = +s.replace(/\D/g, '');
+      if (n >= 1 && n <= 8) periods.push(n);
+    });
+  }
+  let location = STUDY_LOCATIONS[0];
+  for (const loc of STUDY_LOCATIONS) {
+    if (t.includes(loc) || t.includes(loc.replace(/J|B/g, ''))) {
+      location = loc;
+      break;
+    }
+  }
+  // 模糊：氣象館 / 圖書館 / 讀書樓
+  if (/氣象館/.test(t)) location = '氣象館J204';
+  else if (/圖書館/.test(t)) location = '圖書館';
+  else if (/讀書樓/.test(t)) location = '讀書樓B239';
+  let count = 7;
+  const cm = t.match(/共\s*(\d+)\s*員/);
+  if (cm) count = +cm[1];
+  return {
+    empty: false,
+    periods: [...new Set(periods)].sort((a, b) => a - b),
+    location,
+    count
+  };
+}
+
+function buildStudyText(st) {
+  if (!st || st.empty) return '🈚';
+  const periods = st.periods || [];
+  if (!periods.length) return '🈚';
+  const loc = st.location || STUDY_LOCATIONS[0];
+  const count = st.count != null ? st.count : 7;
+  return formatPeriodRanges(periods) + '(' + loc + ')共' + count + '員';
+}
+
+const COSTUME_PRESETS = [
+  { label: '無', value: '🈚' },
+  { label: '上午運動服', value: '第3-4節體育課，報備上午著運動服7員' },
+  { label: '下午運動服', value: '第7、8節社團課，報備下午著運動服7員' },
+  { label: '上下午皆有', value: '第3-4節體育課，報備上午著運動服7員\n第7、8節社團課，報備下午著運動服7員' }
+];
+
+function renderEditor() {
+  const k = $('editDate').value || getDates()[0];
+  renderEditDateChips();
+  if (!k) {
+    $('editor').innerHTML = '<div class="card rounded-2xl p-6 text-center text-slate-500">尚無可編輯日期</div>';
+    return;
+  }
+  if (!['editor', 'admin'].includes(appData.role)) {
+    $('editor').innerHTML = '<div class="card rounded-2xl p-6 text-center text-slate-500">需要編輯權限才能修改資料。</div>';
+    return;
+  }
+  const types = appData.leaveTypes?.length ? appData.leaveTypes : DEFAULT_LEAVE_TYPES;
+  const members = (appData.members || []).map(x => typeof x === 'string' ? x : (x.name || '')).filter(Boolean);
+  const rows = rowsForDate(k);
+
+  $('editor').innerHTML = rows.map(x => {
+    const slot = x.label;
+    const st = ensureEditorSlot(slot, x.value);
+    const pick = editorPick[slot];
+    const sk = esc(slot).replace(/'/g, "\\'");
+
+    if (st.kind === 'study') {
+      const periodChips = STUDY_PERIODS.map(p => {
+        const on = !st.empty && (st.periods || []).indexOf(p) >= 0;
+        return `<button type="button" class="chip ${on ? 'chip-on' : ''}" onclick="editorToggleStudyPeriod('${sk}',${p})">第${p}節</button>`;
+      }).join('');
+      const locChips = STUDY_LOCATIONS.map(loc => {
+        const on = !st.empty && st.location === loc;
+        return `<button type="button" class="chip ${on ? 'chip-type-on' : ''}" onclick="editorSetStudyLocation('${sk}','${esc(loc)}')">${esc(loc)}</button>`;
+      }).join('');
+      const preview = buildStudyText(st);
+      return `<div class="card rounded-2xl p-4 border border-sky-500/20" data-slot="${esc(slot)}">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <div>
+            <div class="text-sm font-bold text-white">${esc(slot)}</div>
+            <div class="text-[10px] text-sky-300/90 mt-0.5">特殊時段 · 節次可多選 + 地點</div>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" onclick="editorClearStudy('${sk}')" class="text-[11px] text-slate-400">設為無</button>
+            <button type="button" onclick="resetEditorSlot('${sk}')" class="text-[11px] text-amber-300">還原範本</button>
+          </div>
+        </div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">節次（可多選，會自動合併成 1-2、5-7）</div>
+        <div class="flex flex-wrap gap-1.5 mb-3">${periodChips}</div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1.5">地點</div>
+        <div class="flex flex-wrap gap-1.5 mb-3">${locChips}</div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-[11px] text-slate-400">共</span>
+          <button type="button" class="w-8 h-8 rounded-lg border border-slate-600" onclick="editorAdjStudyCount('${sk}',-1)">−</button>
+          <span class="font-black tabular-nums w-8 text-center">${st.empty ? '—' : (st.count || 7)}</span>
+          <button type="button" class="w-8 h-8 rounded-lg border border-slate-600" onclick="editorAdjStudyCount('${sk}',1)">+</button>
+          <span class="text-[11px] text-slate-500">員</span>
+        </div>
+        <div class="text-xs text-slate-300 whitespace-pre-line bg-slate-950/60 rounded-xl p-3 border border-slate-800">${esc(preview)}</div>
+      </div>`;
+    }
+
+    if (st.kind === 'costume') {
+      const presets = COSTUME_PRESETS;
+      const presetChips = presets.map(p =>
+        `<button type="button" class="chip ${st.text === p.value ? 'chip-type-on' : ''}" onclick="editorSetSpecialText('${sk}','${esc(p.value).replace(/'/g,"\\'")}')">${esc(p.label)}</button>`
+      ).join('');
+      return `<div class="card rounded-2xl p-4 border border-pink-500/20" data-slot="${esc(slot)}">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <div>
+            <div class="text-sm font-bold text-white">${esc(slot)}</div>
+            <div class="text-[10px] text-pink-300/90 mt-0.5">特殊時段 · 服裝報備</div>
+          </div>
+          <button type="button" onclick="resetEditorSlot('${sk}')" class="text-[11px] text-amber-300">還原範本</button>
+        </div>
+        <div class="text-[11px] text-slate-400 mb-1.5">快速套用</div>
+        <div class="flex flex-wrap gap-1.5 mb-3">${presetChips}</div>
+        <div class="text-xs text-slate-300 whitespace-pre-line bg-slate-950/60 rounded-xl p-3 border border-slate-800 mb-2">${esc(st.text || '🈚')}</div>
+        <div class="text-[11px] font-semibold text-slate-400 mb-1">備註 <span class="font-normal text-slate-600">（選填）</span></div>
+        <input type="text" maxlength="120" placeholder="自訂說明…"
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
+          value="${st.text && st.text !== '🈚' && !presets.some(p => p.value === st.text) ? esc(st.text) : ''}"
+          onchange="editorSetSpecialText('${sk}', this.value || '🈚')">
+      </div>`;
+    }
+
+    if (st.kind === 'waisan') {
+      // 先清理名單外雜訊，再算應到（必須 = 符合資格）
+      ['eligible', 'ineligible', 'willing', 'unwilling'].forEach(k => {
+        st[k] = (st[k] || []).filter(n => members.indexOf(n) >= 0);
+      });
+      st.total = (st.eligible || []).length;
+      const built = buildWaisanClient(st);
+      const groups = [
+        { key: 'eligible', title: '符合資格', color: 'text-emerald-300' },
+        { key: 'ineligible', title: '不符合資格', color: 'text-slate-400' },
+        { key: 'willing', title: '有意願', color: 'text-blue-300' },
+        { key: 'unwilling', title: '無意願', color: 'text-amber-300' }
+      ];
+      const groupBlocks = groups.map(g => {
+        const names = st[g.key] || [];
+        const chips = members.map(n => {
+          const on = names.indexOf(n) >= 0;
+          return `<button type="button" class="chip ${on ? 'chip-on' : ''}" onclick="editorToggleWaisan('${sk}','${g.key}','${esc(n)}')">${esc(n)}</button>`;
+        }).join('');
+        return `<div class="mb-3">
+          <div class="text-[11px] font-semibold ${g.color} mb-1.5">${g.title} · <span class="tabular-nums">${names.length}</span>員</div>
+          <div class="flex flex-wrap gap-1.5">${chips}</div>
+        </div>`;
+      }).join('');
+      const detailChips = (st.details || []).map((line, idx) => {
+        const meta = parseDetailClient(line);
+        if (meta.kind === 'leave' && meta.names.length) {
+          return meta.names.map(nm =>
+            `<button type="button" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] ${dutyChipClass(meta.leaveType)}"
+              onclick="editorRemoveWaisanDetailName('${sk}','${esc(nm)}','${esc(meta.leaveType)}')"><b>${esc(meta.leaveType)}</b>·${esc(nm)} ✕</button>`
+          ).join('');
         }
+        return `<button type="button" class="chip" onclick="editorRemoveWaisanDetail('${sk}',${idx})">${esc(line.slice(0,32))} ✕</button>`;
+      }).join(' ') || '<span class="text-xs text-slate-500">無任務明細</span>';
+      const typeChips = types.map(t =>
+        `<button type="button" class="chip ${pick.type === t ? 'chip-type-on' : ''}" onclick="editorPickType('${sk}','${esc(t)}')">${esc(t)}</button>`
+      ).join('');
+      const memForLeave = members.map(n =>
+        `<button type="button" class="chip ${pick.members.has(n) ? 'chip-on' : ''}" onclick="editorToggleMember('${sk}','${esc(n)}')">${esc(n)}</button>`
+      ).join('');
 
-        let appData = { reports: [], schedule: [] };
-        let selectedReportDay = 'today'; 
-        let selectedScheduleDay = 'today';
-        let future5WorkDays = [];
-        let selectedWorkDayIdx = 0;
-        let hasLeaveOption = true;
+      return `<div class="card rounded-2xl p-4 border border-violet-500/25" data-slot="${esc(slot)}">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div>
+            <div class="text-sm font-bold text-white">${esc(slot)}</div>
+            <div class="text-[10px] text-violet-300/90 mt-0.5">特殊時段 · 外散（資格／意願名單）</div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <span class="text-[11px] text-slate-500">實到 ${built.actual}/${built.total}</span>
+            <button type="button" onclick="editorNormalizeWaisan('${sk}')" class="text-[11px] text-sky-300">整理互斥</button>
+            <button type="button" onclick="resetEditorSlot('${sk}')" class="text-[11px] text-amber-300">範本</button>
+          </div>
+        </div>
+        <div class="text-[10px] text-slate-500 mb-2 leading-relaxed">
+          互斥：符合↔不符合；有意願↔無意願；有意願／無意願必須符合資格；不符合會自動清掉意願。
+        </div>
+        <div class="flex items-center gap-2 mb-3 text-sm">
+          <span class="text-[11px] text-slate-400">應到</span>
+          <span class="font-black tabular-nums text-white">${(st.eligible || []).filter(n => members.indexOf(n) >= 0).length}</span>
+          <span class="text-[11px] text-slate-500">員（＝符合資格）</span>
+        </div>
+        ${groupBlocks}
+        <div class="border-t border-slate-800 pt-3 mb-2">
+          <div class="text-[11px] font-semibold text-slate-400 mb-1.5">任務／缺勤</div>
+          <div class="flex flex-wrap gap-1.5 mb-2">${detailChips}</div>
+          <div class="text-[11px] text-slate-500 mb-1">加入任務：點人 → 點狀態</div>
+          <div class="flex flex-wrap gap-1.5 mb-2">${memForLeave}</div>
+          <div class="h-scroll mb-2">${typeChips}</div>
+          <button type="button" class="btn-primary px-4 py-2 rounded-xl bg-violet-500 text-white text-sm" onclick="editorAddWaisanLeave('${sk}')">加入任務</button>
+        </div>
+      </div>`;
+    }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedGasUrl = localStorage.getItem('gas_web_app_url');
-            if (savedGasUrl) document.getElementById('gas-url-input').value = savedGasUrl;
-            document.getElementById('gas-key-input').value = localStorage.getItem('gas_edit_key') || '';
-            updateDateBadge();
-            generate5WorkDays();
-            refreshAllData();
-        });
+    // —— 一般時段 ——
+    const built = buildCellClient(st);
+    const detailChips = st.details.map((line, idx) => {
+      const meta = parseDetailClient(line);
+      if (meta.kind === 'leave' && meta.names.length) {
+        return meta.names.map(nm =>
+          `<button type="button" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] ${dutyChipClass(meta.leaveType)} hover:border-rose-400/50"
+            onclick="editorRemoveName('${sk}','${esc(nm)}','${esc(meta.leaveType)}')"><b>${esc(meta.leaveType)}</b>·${esc(nm)} <i class="fa-solid fa-xmark text-[10px] opacity-70"></i></button>`
+        ).join('');
+      }
+      return `<button type="button" class="inline-flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] bg-slate-800 border-slate-600 text-slate-300 hover:border-rose-400/50"
+        onclick="editorRemoveLine('${sk}',${idx})">${esc(line.slice(0,40))}${line.length>40?'…':''} <i class="fa-solid fa-xmark text-[10px]"></i></button>`;
+    }).join(' ') || '<span class="text-xs text-slate-500">尚無缺勤／任務</span>';
 
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) { updateDateBadge(); generate5WorkDays(); refreshAllData(); }
-        });
+    const memChips = members.map(n =>
+      `<button type="button" class="chip ${pick.members.has(n) ? 'chip-on' : ''}" onclick="editorToggleMember('${sk}','${esc(n)}')">${esc(n)}</button>`
+    ).join('');
+    const typeChips = types.map(t =>
+      `<button type="button" class="chip ${pick.type === t ? 'chip-type-on' : ''}" onclick="editorPickType('${sk}','${esc(t)}')">${esc(t)}</button>`
+    ).join('');
 
-        function formatDateKey(dateObj) {
-            const y = dateObj.getFullYear();
-            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dateObj.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
+    return `<div class="card rounded-2xl p-4" data-slot="${esc(slot)}">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <div class="text-sm font-bold text-white">${esc(slot)}</div>
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] text-slate-500">實到 ${built.actual}/${built.total}</span>
+          <button type="button" onclick="resetEditorSlot('${sk}')" class="text-[11px] text-amber-300 hover:text-amber-200">
+            <i class="fa-solid fa-rotate-left mr-1"></i>範本
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-[11px] text-slate-400">應到</span>
+        <button type="button" class="w-8 h-8 rounded-lg border border-slate-600 bg-slate-900" onclick="editorAdjTotal('${sk}',-1)">−</button>
+        <span class="font-black tabular-nums w-8 text-center">${st.total}</span>
+        <button type="button" class="w-8 h-8 rounded-lg border border-slate-600 bg-slate-900" onclick="editorAdjTotal('${sk}',1)">+</button>
+        <span class="text-[11px] text-slate-500">員</span>
+      </div>
+      <div class="flex flex-wrap gap-1.5 mb-3 min-h-[28px]">${detailChips}</div>
+      <div class="border-t border-slate-800 pt-3 space-y-2">
+        <div class="text-[11px] font-semibold text-slate-400">加入人員（可多選）</div>
+        <div class="flex flex-wrap gap-1.5">${memChips || '<span class="text-xs text-slate-500">無名單</span>'}</div>
+        <div class="text-[11px] font-semibold text-slate-400">狀態</div>
+        <div class="h-scroll">${typeChips}</div>
+        <div class="text-[11px] font-semibold text-slate-400">備註 <span class="font-normal text-slate-600">（選填）</span></div>
+        <input type="text" maxlength="80" placeholder="調課說明或其他備註…"
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
+          value="${esc(pick.note || '')}"
+          oninput="editorSetNote('${sk}', this.value)">
+        <button type="button" class="btn-primary w-full sm:w-auto px-4 py-2.5 rounded-xl bg-violet-500 hover:bg-violet-400 text-white text-sm"
+          onclick="editorAddEntry('${sk}')">
+          <i class="fa-solid fa-plus mr-1"></i>加入到此時段
+        </button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="card rounded-2xl p-6 text-center text-slate-500">此日無時段列</div>';
+}
 
-        // 計算包含今天在內的未來 5 個工作天
-        function generate5WorkDays() {
-            future5WorkDays = [];
-            const weekLabels = ["日", "一", "二", "三", "四", "五", "六"];
-            let curr = new Date();
+function editorSetSpecialText(slot, text) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'costume') return;
+  st.text = text || '🈚';
+  renderEditor();
+}
+function editorToggleStudyPeriod(slot, period) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'study') return;
+  st.empty = false;
+  if (!Array.isArray(st.periods)) st.periods = [];
+  const i = st.periods.indexOf(period);
+  if (i >= 0) st.periods.splice(i, 1);
+  else st.periods.push(period);
+  st.periods.sort((a, b) => a - b);
+  if (!st.periods.length) st.empty = true;
+  if (!st.location) st.location = STUDY_LOCATIONS[0];
+  if (st.count == null) st.count = 7;
+  renderEditor();
+}
+function editorSetStudyLocation(slot, loc) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'study') return;
+  st.location = loc;
+  if ((st.periods || []).length) st.empty = false;
+  renderEditor();
+}
+function editorAdjStudyCount(slot, d) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'study') return;
+  st.empty = false;
+  st.count = Math.max(0, Math.min(99, (st.count != null ? st.count : 7) + d));
+  renderEditor();
+}
+function editorClearStudy(slot) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'study') return;
+  st.empty = true;
+  st.periods = [];
+  renderEditor();
+}
+/** 外散名單互斥輔助 */
+function waisanEnsureLists(st) {
+  ['eligible', 'ineligible', 'willing', 'unwilling'].forEach(k => {
+    if (!Array.isArray(st[k])) st[k] = [];
+  });
+}
+function waisanRemoveFrom(arr, name) {
+  const i = arr.indexOf(name);
+  if (i >= 0) arr.splice(i, 1);
+}
+function waisanAddTo(arr, name) {
+  if (!name || arr.indexOf(name) >= 0) return;
+  arr.push(name);
+}
+/**
+ * 外散互斥規則：
+ * 1. 符合 ↔ 不符合：互斥
+ * 2. 有意願 ↔ 無意願：互斥
+ * 3. 有意願／無意願 只能是「符合資格」的人
+ * 4. 標成不符合 → 自動移出符合、有意願、無意願
+ * 5. 標成有意願／無意願 → 自動加入符合、移出不符合
+ * 6. 取消符合 → 一併移出有意願／無意願
+ * 7. 點第二次同一組 = 取消該組（取消符合時清意願）
+ */
+function editorToggleWaisan(slot, group, name) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'waisan') return;
+  waisanEnsureLists(st);
+  const on = (st[group] || []).indexOf(name) >= 0;
 
-            while (future5WorkDays.length < 5) {
-                const dayOfWeek = curr.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-                    future5WorkDays.push({
-                        dateKey: formatDateKey(curr),
-                        dateObj: new Date(curr),
-                        month: curr.getMonth() + 1,
-                        date: curr.getDate(),
-                        dayOfWeek: dayOfWeek,
-                        dayLabel: weekLabels[dayOfWeek]
-                    });
-                }
-                curr.setDate(curr.getDate() + 1);
-            }
-            renderEditDayButtons();
-        }
+  if (on) {
+    // 取消勾選
+    waisanRemoveFrom(st[group], name);
+    if (group === 'eligible') {
+      // 不再符合 → 不能再有意願／無意願
+      waisanRemoveFrom(st.willing, name);
+      waisanRemoveFrom(st.unwilling, name);
+    }
+  } else {
+    // 勾選並套用互斥
+    if (group === 'eligible') {
+      waisanAddTo(st.eligible, name);
+      waisanRemoveFrom(st.ineligible, name);
+    } else if (group === 'ineligible') {
+      waisanAddTo(st.ineligible, name);
+      waisanRemoveFrom(st.eligible, name);
+      waisanRemoveFrom(st.willing, name);
+      waisanRemoveFrom(st.unwilling, name);
+    } else if (group === 'willing') {
+      waisanAddTo(st.willing, name);
+      waisanRemoveFrom(st.unwilling, name);
+      waisanAddTo(st.eligible, name);
+      waisanRemoveFrom(st.ineligible, name);
+    } else if (group === 'unwilling') {
+      waisanAddTo(st.unwilling, name);
+      waisanRemoveFrom(st.willing, name);
+      waisanAddTo(st.eligible, name);
+      waisanRemoveFrom(st.ineligible, name);
+    }
+  }
+  // 應到永遠跟符合資格人數
+  st.total = (st.eligible || []).length;
+  renderEditor();
+}
+function editorSyncWaisanTotal(slot) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'waisan') return;
+  st.total = (st.eligible || []).length;
+  renderEditor();
+}
+/** 一鍵整理：把名單互斥修乾淨（讀入舊資料若有衝突時用） */
+function editorNormalizeWaisan(slot) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'waisan') return;
+  waisanEnsureLists(st);
+  // 不符合優先：從符合／意願移除
+  st.ineligible.forEach(n => {
+    waisanRemoveFrom(st.eligible, n);
+    waisanRemoveFrom(st.willing, n);
+    waisanRemoveFrom(st.unwilling, n);
+  });
+  // 意願只能留在符合內
+  st.willing = st.willing.filter(n => st.eligible.indexOf(n) >= 0);
+  st.unwilling = st.unwilling.filter(n => st.eligible.indexOf(n) >= 0);
+  // 有意願 ↔ 無意願：若兩邊都有，保留有意願
+  st.willing.forEach(n => waisanRemoveFrom(st.unwilling, n));
+  st.total = (st.eligible || []).length;
+  toast('已依互斥規則整理外散名單');
+  renderEditor();
+}
+function editorRemoveWaisanDetail(slot, idx) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'waisan') return;
+  st.details.splice(idx, 1);
+  renderEditor();
+}
+function editorRemoveWaisanDetailName(slot, name, leaveType) {
+  const st = editorDraft[slot];
+  if (!st || st.kind !== 'waisan') return;
+  const next = [];
+  st.details.forEach(line => {
+    const meta = parseDetailClient(line);
+    if (meta.kind !== 'leave' || meta.leaveType !== leaveType || !meta.names.length) {
+      next.push(line); return;
+    }
+    const left = meta.names.filter(n => n !== name);
+    if (left.length) next.push(buildLeaveLineClient(left, meta.leaveType));
+  });
+  st.details = next;
+  renderEditor();
+}
+function editorAddWaisanLeave(slot) {
+  const st = editorDraft[slot];
+  const pick = editorPick[slot];
+  if (!st || !pick || st.kind !== 'waisan') return;
+  const names = [...pick.members];
+  if (!names.length || !pick.type) {
+    toast('請點選人員與狀態', 'error');
+    return;
+  }
+  st.details.push(buildLeaveLineClient(names, pick.type));
+  pick.members = new Set();
+  pick.type = '';
+  toast('已加入外散任務（記得儲存）');
+  renderEditor();
+}
 
-        // 核心：從「差勤回報紀錄」第一列 (Header) 找尋目標日期對應的 Column Index
-        function getColumnIndexByDateKey(targetDateKey) {
-            if (!appData.reports || appData.reports.length === 0) return -1;
-            const headers = appData.reports[0];
-            
-            for (let i = 1; i < headers.length; i++) {
-                let headerStr = String(headers[i]).trim();
-                if (headerStr.startsWith(targetDateKey)) return i;
-            }
-            return -1;
-        }
+function editorToggleMember(slot, name) {
+  const p = editorPick[slot] || (editorPick[slot] = { members: new Set(), type: '', note: '' });
+  if (p.members.has(name)) p.members.delete(name);
+  else p.members.add(name);
+  renderEditor();
+}
+function editorPickType(slot, type) {
+  const p = editorPick[slot] || (editorPick[slot] = { members: new Set(), type: '', note: '' });
+  p.type = p.type === type ? '' : type;
+  renderEditor();
+}
+function editorSetNote(slot, note) {
+  const p = editorPick[slot] || (editorPick[slot] = { members: new Set(), type: '', note: '' });
+  p.note = note;
+}
+function editorAdjTotal(slot, d) {
+  const st = editorDraft[slot];
+  if (!st || st.total == null) return;
+  // 外散：應到不可手動改，只跟符合資格
+  if (st.kind === 'waisan') {
+    st.total = (st.eligible || []).length;
+    renderEditor();
+    return;
+  }
+  st.total = Math.max(0, Math.min(99, (+st.total || 0) + d));
+  renderEditor();
+}
+function editorRemoveName(slot, name, leaveType) {
+  const st = editorDraft[slot];
+  if (!st) return;
+  const next = [];
+  st.details.forEach(line => {
+    const meta = parseDetailClient(line);
+    if (meta.kind !== 'leave' || (leaveType && meta.leaveType !== leaveType) || !meta.names.length) {
+      next.push(line);
+      return;
+    }
+    const left = meta.names.filter(n => n !== name);
+    if (left.length === meta.names.length) {
+      next.push(line);
+      return;
+    }
+    if (left.length) next.push(buildLeaveLineClient(left, meta.leaveType));
+  });
+  st.details = next;
+  renderEditor();
+}
+function editorRemoveLine(slot, idx) {
+  const st = editorDraft[slot];
+  if (!st) return;
+  st.details.splice(idx, 1);
+  renderEditor();
+}
+function editorAddEntry(slot) {
+  const st = editorDraft[slot];
+  const pick = editorPick[slot];
+  if (!st || !pick) return;
+  const names = [...pick.members];
+  const note = (pick.note || '').trim();
+  if (pick.type === '調課' || (!names.length && note && /調課/.test(pick.type || note))) {
+    const body = note || pick.type || '調課';
+    st.details.push('調課（' + body.replace(/^調課/, '').trim() + ')');
+  } else if (names.length && pick.type) {
+    st.details.push(buildLeaveLineClient(names, pick.type));
+  } else if (!names.length && pick.type && note) {
+    // 無姓名但有類型＋備註：記為類型行
+    st.details.push(numToChClient(1) + '員' + pick.type + '（' + note + '）');
+  } else {
+    toast('請點選人員與狀態（或填備註作調課）', 'error');
+    return;
+  }
+  pick.members = new Set();
+  pick.type = '';
+  pick.note = '';
+  toast('已加入此時段（記得按儲存）');
+  renderEditor();
+}
 
-        function renderEditDayButtons() {
-            const container = document.getElementById('edit-day-buttons-container');
-            if (!container) return;
-            container.innerHTML = '';
+async function saveEditor() {
+  const k = $('editDate').value;
+  if (!k) return;
+  const url = localStorage.getItem('gas_web_app_url') || '';
+  const key = localStorage.getItem('gas_edit_key') || '';
+  if (!url || !key) {
+    showSettings();
+    return;
+  }
+  const btn = $('saveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i>儲存中…';
 
-            future5WorkDays.forEach((item, index) => {
-                const btn = document.createElement('button');
-                btn.onclick = () => switchEditWorkDay(index);
-                btn.id = `edit-workday-btn-${index}`;
-                btn.className = (index === selectedWorkDayIdx)
-                    ? "px-4 py-2 text-sm rounded-lg border border-gh-purple bg-gh-purple/10 font-bold text-gh-purple transition shadow whitespace-nowrap flex items-center gap-1.5"
-                    : "px-4 py-2 text-sm rounded-lg border border-gh-border bg-gh-bg font-medium text-gh-muted hover:text-white transition whitespace-nowrap flex items-center gap-1.5";
-                
-                btn.innerHTML = `${item.month}/${item.date} (${item.dayLabel})`;
-                container.appendChild(btn);
-            });
-        }
+  const reports = Object.keys(editorDraft).map(slot => {
+    const st = editorDraft[slot];
+    const content = draftToContent(st);
+    return {
+      slot,
+      content,
+      originalContent: st.original || ''
+    };
+  }).filter(x => x.content !== x.originalContent);
 
-        function switchEditWorkDay(idx) {
-            selectedWorkDayIdx = idx;
-            renderEditDayButtons();
-            renderFullReportEditor();
-        }
+  if (!reports.length) {
+    toast('沒有變更');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>儲存此日';
+    return;
+  }
 
-        async function refreshAllData() {
-            const statusBadge = document.getElementById('data-status-badge');
-            const refreshIcon = document.getElementById('refresh-icon');
-            statusBadge.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-[10px]"></i> 自動同步 5 天...`;
-            refreshIcon.classList.add('animate-spin');
+  const force = !!$('forceOverwrite')?.checked;
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'updateDateReport', key, dateKey: k, reports, force })
+    });
+    const j = await r.json();
+    if (!j.ok) {
+      if (j.canForce && j.conflicts?.length) {
+        toast(`${j.error}\n衝突時段：${j.conflicts.join('、')}`, 'error');
+      } else {
+        throw new Error(j.error || '儲存失敗');
+      }
+      return;
+    }
+    toast(`已儲存 ${j.updated} 個時段${j.forced ? '（強制覆寫）' : ''}`);
+    if ($('forceOverwrite')) $('forceOverwrite').checked = false;
+    editorDraft = {};
+    editorPick = {};
+    await loadData();
+  } catch (e) {
+    toast(e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-floppy-disk mr-2"></i>儲存此日';
+  }
+}
 
-            const gasUrl = localStorage.getItem('gas_web_app_url');
-            let failReason = '';
-            if (gasUrl) {
-                try {
-                    const response = await fetch(gasUrl, { cache: 'no-store' });
-                    if (!response.ok) failReason = 'HTTP ' + response.status;
-                    if (response.ok) {
-                        const json = await response.json();
-                        if (json.ok === false) failReason = 'GAS 程式錯誤：' + json.error;
-                        if (json.ok !== false && json.reports && json.schedule) {
-                            appData.reports = json.reports;
-                            appData.schedule = json.schedule;
-                            updateBadgeStatus('gas');
-                            renderAllViews();
-                            refreshIcon.classList.remove('animate-spin');
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    failReason = (e instanceof SyntaxError) ? '回傳內容不是 JSON（多半是部署權限不是「所有人」，或程式需要重新授權）' : '無法連線（網址錯誤、被瀏覽器/網路擋下，或 CORS）';
-                    console.warn("GAS 讀取失敗", e);
-                }
-            }
+async function renderAudit() {
+  const url = localStorage.getItem('gas_web_app_url') || '';
+  const key = localStorage.getItem('gas_edit_key') || '';
+  let rows = appData.stats?.recentAudit || [];
+  if (url) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'getAuditTrail', key })
+      });
+      const j = await r.json();
+      if (j.ok) rows = j.audit || rows;
+    } catch { /* keep local */ }
+  }
+  $('audit').innerHTML = rows.slice(0, 12).map(x => `
+    <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-800">
+      <div class="flex justify-between gap-3">
+        <b>${esc(x.action || '操作')}</b>
+        <span class="text-slate-500">${esc(x.timestamp || '')}</span>
+      </div>
+      <div class="text-slate-400 mt-1">${esc(x.dateKey || '')} · ${esc(x.slot || '')} · ${esc(x.actor || '')}</div>
+    </div>`).join('') || '<div class="text-slate-500">尚無操作紀錄</div>';
+}
 
-            refreshIcon.classList.remove('animate-spin');
-            statusBadge.className = "text-xs px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1 font-normal";
-            statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${gasUrl ? '同步失敗' : '尚未設定 GAS 網址'}`;
-            statusBadge.title = failReason;
-            if (failReason) showToast(failReason, 'error');
-        }
+let quickMode = 'add'; // add | remove
 
-        function updateBadgeStatus(type) {
-            const badge = document.getElementById('data-status-badge');
-            if (type === 'gas') {
-                badge.className = "text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 font-normal";
-                badge.innerHTML = `<i class="fa-solid fa-cloud"></i> 差勤回報紀錄 (已同步 5 天)`;
-            } else {
-                badge.className = "text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center gap-1 font-normal";
-                badge.innerHTML = `<i class="fa-solid fa-table"></i> Google 試算表 (唯讀)`;
-            }
-        }
+function setQuickMode(mode) {
+  quickMode = mode === 'remove' ? 'remove' : 'add';
+  const addBtn = $('modeAddBtn');
+  const rmBtn = $('modeRemoveBtn');
+  const actionBtn = $('quickAddBtn');
+  if (addBtn && rmBtn) {
+    addBtn.classList.toggle('seg-on', quickMode === 'add');
+    rmBtn.classList.toggle('seg-on', quickMode === 'remove');
+  }
+  if (actionBtn) {
+    if (quickMode === 'add') {
+      actionBtn.innerHTML = '<i class="fa-solid fa-plus mr-2"></i>確認加入';
+      actionBtn.className = 'btn-primary w-full sm:w-auto px-6 py-3 rounded-2xl bg-violet-500 hover:bg-violet-400 text-white text-sm disabled:opacity-40';
+    } else {
+      actionBtn.innerHTML = '<i class="fa-solid fa-minus mr-2"></i>確認移除';
+      actionBtn.className = 'btn-primary w-full sm:w-auto px-6 py-3 rounded-2xl bg-rose-500 hover:bg-rose-400 text-white text-sm disabled:opacity-40';
+    }
+  }
+  const typeBlock = $('quickTypeBlock');
+  if (typeBlock) typeBlock.style.opacity = quickMode === 'remove' ? '0.35' : '1';
+  const typeEl = $('quickType');
+  if (typeEl) typeEl.disabled = quickMode === 'remove';
+  updateQuickSummary();
+}
 
-        function renderAllViews() {
-            renderDailyReportView();
-            renderDailyScheduleView();
-            renderWeeklyTimetable();
-            renderEditDayButtons();
-            if (!document.getElementById('tab-full-report').classList.contains('hidden')) renderFullReportEditor();
-        }
+function suggestPeriodByTime() {
+  let period = appData.suggestedPeriod || '';
+  if (!period) {
+    const now = new Date();
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false
+    }).formatToParts(now);
+    const hh = +parts.find(p => p.type === 'hour').value;
+    const mm = +parts.find(p => p.type === 'minute').value;
+    const t = hh * 60 + mm;
+    if (t >= 19 * 60 + 15) period = '1930';
+    else if (t >= 18 * 60 + 30) period = '1850';
+    else if (t >= 16 * 60 + 30) period = '1700';
+    else if (t >= 13 * 60) period = '1340';
+    else if (t >= 11 * 60 + 30) period = '1200';
+    else period = '0740';
+  }
+  pickQuickPeriod(period);
+  toast(`已建議時段：${PERIOD_CHIPS.find(p => p.v === period)?.l || period}`);
+}
 
-        function renderDailyReportView() {
-            const targetDateKey = reportDateKey(selectedReportDay);
-            hasLeaveOption = getLeave(targetDateKey);
-            syncLeaveUI();
-            const colIndex = getColumnIndexByDateKey(targetDateKey);
-            const container = document.getElementById('daily-report-cards-container');
-            container.innerHTML = '';
+let quickSelectedMembers = new Set();
 
-            if (!appData.reports || appData.reports.length < 2 || colIndex === -1) {
-                container.innerHTML = `<div class="p-6 text-center text-gh-muted glass-panel rounded-xl">尚未找到 ${targetDateKey} 之『差勤回報紀錄』資料。</div>`;
-                return;
-            }
+function pickQuickMember(name) {
+  if (quickSelectedMembers.has(name)) quickSelectedMembers.delete(name);
+  else quickSelectedMembers.add(name);
+  const el = $('quickMember');
+  if (el) el.value = [...quickSelectedMembers][0] || '';
+  document.querySelectorAll('#quickMemberChips .chip').forEach(b => {
+    b.classList.toggle('chip-on', quickSelectedMembers.has(b.dataset.name));
+  });
+  updateQuickSummary();
+}
 
-            for (let r = 1; r < appData.reports.length; r++) {
-                const row = appData.reports[r];
-                const rawSlotName = row[0] || '';
-                const content = row[colIndex] || '無特別紀錄';
-                if (rawSlotName.trim() === '外散' && !hasLeaveOption) continue;
+function renderQuickMembers() {
+  const el = $('quickMember');
+  if (!el) return;
+  const members = appData.members || [];
+  const names = members.map(x =>
+    typeof x === 'string' ? x : (x.name || x.member || x.person || '')
+  ).filter(Boolean);
+  const lastMember = localStorage.getItem('quick_last_member') || '';
+  const lastType = localStorage.getItem('quick_last_type') || '';
+  const lastPeriod = localStorage.getItem('quick_last_period') || appData.suggestedPeriod || '';
 
-                if (rawSlotName.includes('1850')) {
-                    if (hasLeaveOption && rawSlotName.includes('無外散假')) continue;
-                    if (!hasLeaveOption && rawSlotName.includes('有外散假')) continue;
-                }
+  el.innerHTML = '<option value="">選擇人員</option>' +
+    names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  if (lastMember && names.includes(lastMember) && quickSelectedMembers.size === 0) {
+    quickSelectedMembers.add(lastMember);
+    el.value = lastMember;
+  }
+  if (lastType && $('quickType')) $('quickType').value = lastType;
+  if (lastPeriod && $('quickPeriod')) $('quickPeriod').value = lastPeriod;
 
-                let displayTitle = rawSlotName;
-                let badgeHtml = '';
+  const chips = $('quickMemberChips');
+  if (chips) {
+    chips.innerHTML = names.map(n =>
+      `<button type="button" class="chip ${quickSelectedMembers.has(n) ? 'chip-on' : ''}" data-name="${esc(n)}" onclick="pickQuickMember('${esc(n)}')">${esc(n)}</button>`
+    ).join('') || '<span class="text-xs text-slate-500">無人員名單，請至試算表「人員清單」設定</span>';
+  }
+  const hint = $('quickMembersHint');
+  if (hint) {
+    hint.textContent = names.length
+      ? `共 ${names.length} 人 · 可多選 · 僅備註可打字`
+      : '後端尚未回傳 members';
+  }
+  renderPeriodChips();
+  setQuickMode(quickMode);
+  updateQuickSummary();
+}
 
-                if (rawSlotName.includes('1850')) {
-                    displayTitle = '1850';
-                    badgeHtml = hasLeaveOption 
-                        ? `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-bold"><i class="fa-solid fa-person-walking-luggage mr-1"></i>外散假</span>`
-                        : `<span class="px-2 py-0.5 rounded bg-gray-500/20 text-gray-400 border border-gray-500/30 text-xs"><i class="fa-solid fa-ban mr-1"></i>無外散假</span>`;
-                }
+function resolveQuickDateKey() {
+  const sel = $('quickDate')?.value || 'today';
+  if (sel === 'tomorrow') return nextWorkdayKey();
+  return todayKey();
+}
 
-                const card = document.createElement('div');
-                card.className = "glass-panel p-4 rounded-xl border border-gh-border transition flex flex-col space-y-2";
-                card.innerHTML = `
-                    <div class="flex items-center justify-between border-b border-gh-border/50 pb-2">
-                        <div class="flex items-center gap-2">
-                            <span class="px-2.5 py-1 bg-gh-blue/10 border border-gh-blue/30 rounded-lg text-gh-blue font-bold text-xs font-mono">
-                                ${escapeHtml(displayTitle)}
-                            </span>
-                            ${badgeHtml}
-                        </div>
-                        <button data-copy class="text-xs text-gh-muted hover:text-gh-blue px-2 py-1 rounded bg-gh-bg border border-gh-border transition flex items-center gap-1">
-                            <i class="fa-regular fa-copy"></i> 複製
-                        </button>
-                    </div>
-                    <p class="text-xs text-gh-text whitespace-pre-line font-mono bg-gh-bg/60 p-3 rounded-lg border border-gh-border/50 leading-relaxed">${escapeHtml(content)}</p>
-                `;
-                card.querySelector('[data-copy]').addEventListener('click', () => copySingleSlot(displayTitle, content));
-                container.appendChild(card);
-            }
-        }
+async function quickAddAttendance() {
+  if (!['editor', 'admin'].includes(appData.role)) {
+    toast('目前密鑰沒有編輯權限', 'error');
+    return;
+  }
+  const members = [...(quickSelectedMembers || [])];
+  const type = $('quickType').value;
+  const period = $('quickPeriod').value;
+  const note = ($('quickNote')?.value || '').trim();
+  if (!members.length || !period) {
+    toast('請點選人員與時段', 'error');
+    return;
+  }
+  if (quickMode === 'add' && !type) {
+    toast('加入時請點選狀態', 'error');
+    return;
+  }
+  const url = localStorage.getItem('gas_web_app_url') || '';
+  const key = localStorage.getItem('gas_edit_key') || '';
+  if (!url || !key) {
+    showSettings();
+    return;
+  }
 
-        function renderFullReportEditor() {
-            const container = document.getElementById('edit-day-panels');
-            container.innerHTML = '';
+  const dateKey = resolveQuickDateKey();
+  const btn = $('quickAddBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i>處理中…';
 
-            const currentWorkDayInfo = future5WorkDays[selectedWorkDayIdx];
-            const targetDateKey = currentWorkDayInfo.dateKey;
-            const colIndex = getColumnIndexByDateKey(targetDateKey);
-            const dateDisplay = `${currentWorkDayInfo.month}/${currentWorkDayInfo.date} (週${currentWorkDayInfo.dayLabel})`;
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({
+        action: 'quickAttendance',
+        key,
+        dateKey,
+        members,
+        member: members[0],
+        type: type || '',
+        period,
+        mode: quickMode,
+        note
+      })
+    });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || '後端尚未支援快速登錄');
+    const slots = j.updatedSlots || j.updated || 0;
+    localStorage.setItem('quick_last_member', members[0]);
+    if (type) localStorage.setItem('quick_last_type', type);
+    localStorage.setItem('quick_last_period', period);
+    const who = members.join('、');
+    if (quickMode === 'remove') {
+      toast(slots ? `已移除：${who}（${slots} 時段）` : `找不到登錄`);
+    } else {
+      toast(`已加入：${who}／${type}／${period}（${slots} 時段）`);
+    }
+    if ($('quickNote')) $('quickNote').value = '';
+    await loadData();
+  } catch (e) {
+    toast('快速登錄：' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    setQuickMode(quickMode);
+  }
+}
 
-            if (!appData.reports || appData.reports.length < 2 || colIndex === -1) {
-                container.innerHTML = `<div class="p-6 text-center text-gh-muted glass-panel rounded-xl">讀取資料中，請稍候...</div>`;
-                return;
-            }
+function showSettings() {
+  $('gasUrl').value = localStorage.getItem('gas_web_app_url') || '';
+  $('gasKey').value = localStorage.getItem('gas_edit_key') || '';
+  $('settingsModal').classList.remove('hidden');
+  $('settingsModal').classList.add('flex');
+}
 
-            for (let r = 1; r < appData.reports.length; r++) {
-                const rawSlotName = appData.reports[r][0] || '';
-                const val = appData.reports[r][colIndex] || '';
+function hideSettings() {
+  $('settingsModal').classList.add('hidden');
+  $('settingsModal').classList.remove('flex');
+}
 
-                const block = document.createElement('div');
-                block.className = "glass-panel p-4 rounded-xl space-y-2 border border-gh-border";
-                block.innerHTML = `
-                    <div class="flex items-center justify-between">
-                        <label class="text-sm font-bold text-white flex items-center gap-2">
-                            <i class="fa-solid fa-tag text-gh-purple"></i> 時段: ${escapeHtml(rawSlotName)} 
-                            <span class="text-gh-purple font-mono text-xs">(${dateDisplay})</span>
-                        </label>
-                    </div>
-                    <textarea id="edit-cell-${r}" 
-                        data-slot="${escapeHtml(rawSlotName)}"
-                        data-original="${escapeHtml(val)}"
-                        rows="3" 
-                        class="w-full bg-gh-bg border border-gh-border rounded-lg p-2.5 text-xs text-gh-text font-mono focus:outline-none focus:border-gh-purple transition">${escapeHtml(val)}</textarea>
-                `;
-                container.appendChild(block);
-            }
-        }
+function saveSettings() {
+  localStorage.setItem('gas_web_app_url', $('gasUrl').value.trim());
+  localStorage.setItem('gas_edit_key', $('gasKey').value.trim());
+  hideSettings();
+  loadData();
+}
 
-        async function saveCurrentDateToGAS() {
-            const gasUrl = localStorage.getItem('gas_web_app_url');
-            if (!gasUrl) {
-                showToast("請先至「設定」頁面輸入 GAS Web App 網址", "error");
-                switchTab('tab-settings');
-                return;
-            }
+function toast(msg, type = 'ok') {
+  const d = document.createElement('div');
+  d.className = `pointer-events-auto px-4 py-3 rounded-2xl border text-sm shadow-soft flex items-start gap-2 ${
+    type === 'error'
+      ? 'bg-rose-950/95 border-rose-500/40 text-rose-100'
+      : 'bg-slate-900/95 border-slate-600 text-white'
+  }`;
+  d.innerHTML = `<i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation text-rose-300' : 'fa-circle-check text-emerald-300'} mt-0.5 shrink-0"></i><span class="whitespace-pre-line">${esc(msg)}</span>`;
+  $('toast').appendChild(d);
+  setTimeout(() => d.remove(), 3400);
+}
 
-            const currentWorkDayInfo = future5WorkDays[selectedWorkDayIdx];
-            const dateKey = currentWorkDayInfo.dateKey;
+// Close modal on backdrop click
+$('settingsModal').addEventListener('click', e => {
+  if (e.target === $('settingsModal')) hideSettings();
+});
 
-            const payloadReports = [];
-            if (appData.reports) {
-                for (let r = 1; r < appData.reports.length; r++) {
-                    const textarea = document.getElementById(`edit-cell-${r}`);
-                    if (textarea) {
-                        const orig = (textarea.getAttribute('data-original') || '').replace(/\r\n/g, '\n');
-                        if (textarea.value.replace(/\r\n/g, '\n') !== orig) {
-                            payloadReports.push({ slot: textarea.getAttribute('data-slot'), content: textarea.value });
-                        }
-                    }
-                }
-            }
+window.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-nav="dashboard"]').forEach(el => el.classList.add('nav-active'));
+  loadData();
+});
 
-            const editKey = localStorage.getItem('gas_edit_key') || '';
-            if (!editKey) { showToast("請先至「設定」輸入編輯密碼", "error"); switchTab('tab-settings'); return; }
-            if (!payloadReports.length) { showToast("沒有任何變更", "info"); return; }
-
-            const btn = document.getElementById('save-gas-btn');
-            btn.disabled = true;
-            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 儲存中...`;
-
-            try {
-                const response = await fetch(gasUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain' },
-                    body: JSON.stringify({
-                        action: "updateDateReport",
-                        key: editKey,
-                        dateKey: dateKey,
-                        reports: payloadReports
-                    })
-                });
-
-                const result = await response.json().catch(() => null);
-                if (response.ok && result && result.ok) {
-                    showToast(`已寫入 ${dateKey}（${result.updated} 個時段）`, "success");
-                    refreshAllData();
-                } else {
-                    showToast("儲存失敗：" + ((result && result.error) || "請檢查部署權限"), "error");
-                }
-            } catch (e) {
-                showToast("儲存失敗：請檢查網路連線或 GAS Web App URL 格式", "error");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = `<i class="fa-solid fa-floppy-disk"></i> 儲存此日變更`;
-            }
-        }
-
-        function renderDailyScheduleView() {
-            const dayOfWeek = keyToDate(reportDateKey(selectedScheduleDay)).getDay();
-
-            const colIndex = dayOfWeek + 1;
-            const timeline = document.getElementById('daily-schedule-timeline');
-            timeline.innerHTML = '';
-
-            if (!appData.schedule || appData.schedule.length < 2) return;
-
-            for (let r = 1; r < appData.schedule.length; r++) {
-                const row = appData.schedule[r];
-                const period = row[0] || '';
-                const time = row[1] || '';
-                const courseInfo = row[colIndex] || '（無課程）';
-
-                const card = document.createElement('div');
-                card.className = "glass-panel p-4 rounded-xl border border-gh-border flex items-center justify-between hover:border-gh-gold/50 transition";
-                card.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <div class="p-2.5 bg-gh-gold/10 border border-gh-gold/20 rounded-xl text-gh-gold font-bold text-center min-w-[70px]">
-                            <div class="text-xs">${period}</div>
-                            <div class="text-[10px] opacity-80 font-mono">${time}</div>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-white">${escapeHtml(courseInfo)}</h3>
-                        </div>
-                    </div>
-                `;
-                timeline.appendChild(card);
-            }
-        }
-
-        function renderWeeklyTimetable() {
-            const tbody = document.getElementById('weekly-timetable-body');
-            tbody.innerHTML = '';
-
-            if (!appData.schedule || appData.schedule.length < 2) return;
-
-            for (let r = 1; r < appData.schedule.length; r++) {
-                const row = appData.schedule[r];
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-gh-card/50 transition border-b border-gh-border/50";
-
-                tr.innerHTML = `
-                    <td class="p-3 text-center border-r border-gh-border font-medium bg-gh-card/30">
-                        <div class="font-bold text-white text-xs">${row[0]}</div>
-                        <div class="text-[10px] text-gh-muted font-mono">${row[1]}</div>
-                    </td>
-                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[2] || '-')}</td>
-                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[3] || '-')}</td>
-                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[4] || '-')}</td>
-                    <td class="p-3 border-r border-gh-border text-xs text-center">${escapeHtml(row[5] || '-')}</td>
-                    <td class="p-3 text-xs text-center">${escapeHtml(row[6] || '-')}</td>
-                `;
-                tbody.appendChild(tr);
-            }
-        }
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.remove('hidden');
-            document.getElementById('btn-' + tabId).classList.add('active');
-
-            if (tabId === 'tab-full-report') renderFullReportEditor();
-            else if (tabId === 'tab-weekly-schedule') renderWeeklyTimetable();
-        }
-
-        function toggleLeaveOption(checked) {
-            hasLeaveOption = checked;
-            setLeave(reportDateKey(selectedReportDay), checked);
-            renderDailyReportView();
-        }
-
-        function updateDateBadge() {
-            const t = new Date();
-            document.getElementById('current-date-badge').innerText = `${t.getFullYear()}/${t.getMonth()+1}/${t.getDate()} (週${WEEK[t.getDay()]})`;
-            [['today','今日'],['tomorrow','明日']].forEach(([mode, name]) => {
-                const d = keyToDate(reportDateKey(mode));
-                const label = `${name} (${d.getMonth()+1}/${d.getDate()} 週${WEEK[d.getDay()]})`;
-                document.getElementById(mode === 'today' ? 'btn-day-today' : 'btn-day-tomorrow').innerText = label;
-                document.getElementById(mode === 'today' ? 'btn-sched-today' : 'btn-sched-tomorrow').innerText = label;
-            });
-        }
-
-        function setReportDay(mode) {
-            selectedReportDay = mode;
-            document.getElementById('btn-day-today').className = mode === 'today' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-blue text-white shadow" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
-            document.getElementById('btn-day-tomorrow').className = mode === 'tomorrow' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-blue text-white shadow" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
-            renderDailyReportView();
-        }
-
-        function setScheduleDay(mode) {
-            selectedScheduleDay = mode;
-            document.getElementById('btn-sched-today').className = mode === 'today' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-gold text-black font-semibold" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
-            document.getElementById('btn-sched-tomorrow').className = mode === 'tomorrow' ? "px-3 py-1 text-xs rounded-md font-medium transition bg-gh-gold text-black font-semibold" : "px-3 py-1 text-xs rounded-md font-medium text-gh-muted hover:text-white transition";
-            renderDailyScheduleView();
-        }
-
-        function copySingleSlot(slot, content) {
-            copyToClipboard(`▶ 時段：${slot}\n${content}`);
-        }
-
-        function copyFullDayReport() {
-            const dateKey = reportDateKey(selectedReportDay);
-            hasLeaveOption = getLeave(dateKey);
-            syncLeaveUI();
-            const colIndex = getColumnIndexByDateKey(dateKey);
-
-            let fullText = `=== 116氣象組 每日通報 (${dateKey}) ===\n\n`;
-
-            if (appData.reports && appData.reports.length > 1 && colIndex !== -1) {
-                for (let r = 1; r < appData.reports.length; r++) {
-                    const rawSlotName = appData.reports[r][0];
-                    if (rawSlotName.trim() === '外散' && !hasLeaveOption) continue;
-                    if (rawSlotName.includes('1850')) {
-                        if (hasLeaveOption && rawSlotName.includes('無外散假')) continue;
-                        if (!hasLeaveOption && rawSlotName.includes('有外散假')) continue;
-                    }
-                    const content = appData.reports[r][colIndex] || '無';
-                    fullText += `【${rawSlotName}】\n${content}\n--------------------\n`;
-                }
-            }
-
-            copyToClipboard(fullText);
-        }
-
-        function saveGASUrl() {
-            const url = document.getElementById('gas-url-input').value.trim();
-            localStorage.setItem('gas_edit_key', document.getElementById('gas-key-input').value.trim());
-            if (url) {
-                localStorage.setItem('gas_web_app_url', url);
-                showToast("GAS 網址已儲存，同步中...", "success");
-                refreshAllData();
-            } else {
-                localStorage.removeItem('gas_web_app_url');
-                showToast("已清除 GAS 網址", "info");
-                refreshAllData();
-            }
-        }
-
-        function copyToClipboard(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            try {
-                document.execCommand('copy');
-                showToast("已成功複製到剪貼簿！", "success");
-            } catch (err) {
-                showToast("複製失敗", "error");
-            }
-            document.body.removeChild(textarea);
-        }
-
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            let bgClass = "bg-gh-card border-gh-border text-white";
-            let icon = "fa-circle-info text-gh-blue";
-
-            if (type === 'success') {
-                bgClass = "bg-emerald-950/90 border-emerald-500/50 text-emerald-200";
-                icon = "fa-circle-check text-emerald-400";
-            } else if (type === 'error') {
-                bgClass = "bg-rose-950/90 border-rose-500/50 text-rose-200";
-                icon = "fa-circle-exclamation text-rose-400";
-            }
-
-            toast.className = `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-xl backdrop-blur-md transition-all duration-300 transform translate-y-2 opacity-0 text-xs font-medium ${bgClass}`;
-            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i> <span>${escapeHtml(message)}</span>`;
-            container.appendChild(toast);
-
-            setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function escapeHtml(str) {
-            if (!str) return '';
-            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-
-        function escapeQuotes(str) {
-            if (!str) return '';
-            return String(str).replace(/`/g, '\\`').replace(/"/g, '&quot;');
-        }
-    </script>
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadData();
+});
+</script>
 </body>
 </html>
